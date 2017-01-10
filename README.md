@@ -29,7 +29,7 @@ git config --global http.proxy http://hx.gy:1080
     ]
 }
 #npm
-$ PHANTOMJS_CDNURL=http://cnpmjs.org/downloads npm install [name]
+$ PHANTOMJS_CDNURL=http://cnpmjs.org/downloads npm install [name] 
 $ PHANTOMJS_CDNURL=http://cnpmjs.org/downloads npm -g update
 #brew
 cd /usr/local/
