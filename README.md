@@ -29,8 +29,7 @@ git config --global http.proxy http://hx.gy:1080
     ]
 }
 #npm
-$ PHANTOMJS_CDNURL=http://cnpmjs.org/downloads npm install [name] 
-$ PHANTOMJS_CDNURL=http://cnpmjs.org/downloads npm -g update
+npm config set registry https://registry.npm.taobao.org 
 #brew
 cd /usr/local/
 git remote set-url origin http://mirrors.ustc.edu.cn/homebrew.git
