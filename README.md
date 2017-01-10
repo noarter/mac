@@ -14,11 +14,11 @@ http://mavensync.zkoss.org/maven2/
 http://maven.springframework.org/release/
 http://maven.aliyun.com/nexus/content/groups/public/
 
-1.github请求代理
+#github请求代理
 git config --global http.proxy http://hx.gy:1080
-2. [代码]Android Studio
+#Android Studio
 ./android list sdk -u --proxy-host=hx.gy --proxy-port=1080
-3. [代码]composer镜像
+#composer镜像
 {
     "repositories": [
         { "packagist": false },
@@ -28,10 +28,10 @@ git config --global http.proxy http://hx.gy:1080
         }
     ]
 }
-4. [代码]npm
+#npm
 $ PHANTOMJS_CDNURL=http://cnpmjs.org/downloads npm install [name]
 $ PHANTOMJS_CDNURL=http://cnpmjs.org/downloads npm -g update
-5. [代码]brew     
+#brew
 cd /usr/local/
 git remote set-url origin http://mirrors.ustc.edu.cn/homebrew.git
 brew update
