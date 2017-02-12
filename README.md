@@ -34,3 +34,9 @@ npm config set registry https://registry.npm.taobao.org
 cd /usr/local/
 git remote set-url origin http://mirrors.ustc.edu.cn/homebrew.git
 brew update
+＃jdk
+cd  ~touch .bash_profile
+vi  .bash_profile
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home 
+export PATH=$JAVA_HOME/bin:$PATH
+export CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
