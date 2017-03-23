@@ -1,6 +1,20 @@
 # mac
-mac安装homebrew
+安装、卸载homebrew
 ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/uninstall)"
+sudo rm -rf /usr/local/
+
+替换homebrew默认源
+cd /usr/local
+git remote set-url origin git://mirrors.ustc.edu.cn/brew.git
+
+替换homebrew-core默认源
+cd /usr/local/Library/Taps/homebrew/homebrew-core
+git remote set-url origin git://mirrors.ustc.edu.cn/homebrew-core.git
+
+替换homebrew bottles默认源
+echo 'export HOMEBREW_BOTTLE_DOMAIN=https://mirrors.ustc.edu.cn/homebrew-bottles' >> ~/.bashrc
+sourch ~/.bashrc
 
 #maven镜像
 http://uk.maven.org/maven2/
