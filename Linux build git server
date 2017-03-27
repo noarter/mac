@@ -1,0 +1,30 @@
+centos安装git及搭建git服务器
+
+# 安装git
+yum install git
+# 创建git仓库
+mkdir project.git
+# 进入该目录下，初始化git仓库
+cd project.git
+git --bare init
+# 获取远程仓库地址<用户名>@<服务器地址>:<仓库全路径>
+# 添加用户
+useradd git
+# 给git用户设置密码
+passwd git
+# 给git用户授权
+chown -R git:git /home/git/
+
+# 生成客户端ssh公钥
+ssh-keygen -t rsa -C "youremail@example.com"
+
+# 客户端初始化
+mkdir project
+cd project
+touch readme.md
+echo "helo" >> readme.md
+git init
+git add readme.md
+git commit -m "init"
+git remote add origin git仓库地址
+git push -u origin master
