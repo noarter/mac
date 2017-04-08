@@ -1,7 +1,8 @@
 # mac
-# 安装、卸载homebrew
+# 安装homebrew
 ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/uninstall)"
+# 卸载homebrew
+ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/uninstall)" 
 sudo rm -rf /usr/local/
 
 # 替换homebrew默认源
@@ -39,13 +40,15 @@ git config --global http.proxy http://hx.gy:1080
 # npm
 npm config set registry https://registry.npm.taobao.org 
 # brew
-cd /usr/local/
-git remote set-url origin http://mirrors.ustc.edu.cn/homebrew.git
-brew update
+cd /usr/local/ 
+git remote set-url origin http://mirrors.ustc.edu.cn/homebrew.git 
+brew update 
 
 # jdk
-cd  ~touch .bash_profile
-vi  .bash_profile
+cd  ~touch .bash_profile 
+vi  .bash_profile 
 export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home 
-export PATH=$JAVA_HOME/bin:$PATH
-export CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+export CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar 
+export M2_HOME=/Library/apache-maven-3.3.9 
+export PATH=$PATH:$JAVA_HOME/bin:$M2_HOME/bin  
+source .bash_profile 
