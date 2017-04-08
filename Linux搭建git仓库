@@ -1,5 +1,4 @@
-centos安装git及搭建git服务器
-
+# centos安装git及搭建git服务器
 # 安装git
 yum install git
 # 创建git仓库
