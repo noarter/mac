@@ -1,0 +1,28 @@
+# 安装jenkins
+
+# sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat/jenkins.repo
+# sudo rpm --import https://pkg.jenkins.io/redhat/jenkins.io.key
+# yum install jenkins
+
+# jenkins安装目录，WAR包会放在这里
+/usr/lib/jenkins
+
+# jenkins配置文件，“端口”，“JENKINS_HOME”等都可以在这里配置。
+vim /etc/sysconfig/jenkins
+
+# 默认的JENKINS_HOME。
+/var/lib/jenkins/
+
+# Jenkins日志文件
+/var/log/jenkins/jenkins.log
+
+# 启动Jenkins
+sudo service jenkins start
+有可能出现错误：“Starting Jenkins -bash: /usr/bin/Java: No such file or directory”。表示找不到Jenkins找不到java。
+这时就需要把java路径加入到“vi /etc/init.d/jenkins”文件里面
+
+# 登录Jenkins
+http://<ip address>:8080/登录Jenkins
+
+# 初期启动需要密码
+密码文件 /var/lib/jenkins/secrets/initialAdminPassword , 然后填入点击 Continue
