@@ -1,22 +1,44 @@
 # centos安装git及搭建git服务器
 # 安装git
-yum install git
+[root@localhost]# yum install git
 # 创建git仓库
-mkdir project.git
+[root@localhost git]# pwd
+/home/git
+[root@localhost git]# mkdir project.git
 # 进入该目录下，初始化git仓库
-cd project.git
-git --bare init
+[root@localhost]# cd project.git
+[root@localhost]# git --bare init
 # 获取远程仓库地址<用户名>@<服务器地址>:<仓库全路径>
 # 添加用户
-useradd git
+[root@localhost]# useradd git
 # 给git用户设置密码
-passwd git
+[root@localhost]# passwd git
 # 给git用户授权
-chown -R git:git /home/git/
-
+[root@localhost]# chown -R git:git /home/git/
 # 生成客户端ssh公钥
 ssh-keygen -t rsa -C "youremail@example.com"
-
+此时 C:\Users\用户名\.ssh 下会多出两个文件 id_rsa 和 id_rsa.pub
+id_rsa 是私钥
+id_rsa.pub 是公钥
+# 修改ssh_config配置
+进入 /etc/ssh 目录，编辑 sshd_config，打开以下三个配置的注释：
+RSAAuthentication yes
+PubkeyAuthentication yes
+AuthorizedKeysFile .ssh/authorized_keys
+保存并重启 sshd 服务：
+[root@localhost ssh]# /etc/rc.d/init.d/sshd restart
+# 创建.ssh
+由 AuthorizedKeysFile 得知公钥的存放路径是 .ssh/authorized_keys，实际上是 $Home/.ssh/authorized_keys，由于管理 Git 服务的用户是 git，所以实际存放公钥的路径是/home/git/.ssh/authorized_keys
+在 /home/git/ 下创建目录 .ssh
+[root@localhost git]# pwd
+/home/git
+[root@localhost git]# mkdir .ssh
+[root@localhost git]# ls -a 
+. .. .bash_logout .bash_profile .bashrc .gnome2 .mozilla .ssh
+# 导入客户端公钥
+将客户端公钥导入服务器端 /home/git/.ssh/authorized_keys 文件
+回到 Git Bash 下，导入文件：
+$ ssh git@192.168.1.101 'cat >> .ssh/authorized_keys' < ~/.ssh/id_rsa.pub
 # 客户端初始化
 mkdir project
 cd project
