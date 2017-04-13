@@ -1,0 +1,60 @@
+# 安装jenkins
+
+# sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat/jenkins.repo
+# sudo rpm --import https://pkg.jenkins.io/redhat/jenkins.io.key
+# yum install jenkins
+
+# jenkins安装目录，WAR包会放在这里
+/usr/lib/jenkins
+
+# jenkins配置文件，“端口”，“JENKINS_HOME”等都可以在这里配置。
+vim /etc/sysconfig/jenkins
+
+# 默认的JENKINS_HOME。
+/var/lib/jenkins/
+
+# Jenkins日志文件
+/var/log/jenkins/jenkins.log
+
+# 启动Jenkins
+sudo service jenkins start
+有可能出现错误：“Starting Jenkins -bash: /usr/bin/Java: No such file or directory”。表示找不到Jenkins找不到java。
+这时就需要把java路径加入到“vi /etc/init.d/jenkins”文件里面
+
+# 登录Jenkins
+http://<ip address>:8080/登录Jenkins
+
+# 初期启动需要密码
+密码文件 /var/lib/jenkins/secrets/initialAdminPassword , 然后填入点击 Continue
+
+# jenkins自动化构建打包到指定位置
+1.进入插件管理安装jenkins集成maven插件（Maven Integration plugin）安装构建成功远程部署到指定服务器插件（Publish over SSH）
+2.进入系统配置，配置Subversion，Publish over SSH，maven
+3.进入全局工具配置，配置jdk，ant，maven安装路径
+4.配置Global credentials
+5.新建一个maven item
+6.general-》填写项目名称，项目描述
+  源码管理-》填入svn或者git仓库地址及Credentials和本地模块目录
+  构建触发器-》勾选Build periodically设置定时构建发布时间（如：H 1 * * *）
+  构建环境-》Build 输入Root Pom：pom.xml，Goals and options ：clean package， Post Steps：Invoke Ant：Ant Version ant_1.9.9, Build File ci_output.xml
+  
+# 自动构建部署项目
+1.进入插件管理安装jenkins集成maven插件（Maven Integration plugin）安装构建成功远程部署到指定服务器插件（Publish over SSH）
+2.进入系统配置，配置Subversion，Publish over SSH，maven
+3.进入全局工具配置，配置jdk，ant，maven安装路径
+4.配置Global credentials
+5.新建一个maven item
+6.general-》填写项目名称，项目描述
+  源码管理-》填入svn或者git仓库地址及Credentials和本地模块目录
+  构建触发器-》勾选Build periodically设置定时构建发布时间（如：H 1 * * *）
+  构建环境-》Build 输入Root Pom：pom.xml，Goals and options ：clean package， Post Steps：Send file or execute commands over SSH
+  SSH Publishers：SSH Server：Name：服务器地址（如192.168.1.1）
+  Transfers：Transfer Set:Source files:ikaycity/ikaycity-ws/target/*.war,Remove prefix	:ikaycity/ikaycity-ws/target,
+  Remote directory:war/,
+  Exec command:   #deploy ws war
+                  export JAVA_HOME=/usr/java/jdk1.8.0_112
+                  export JAVA_JRE=/usr/java/jdk1.8.0_112/jre
+                  ./tomcat-ws/bin/shutdown.sh
+                  rm -rf tomcat-ws/webapps/ikaycity-ws*
+                  mv war/ikaycity-ws.war tomcat-ws/webapps/
+                  ./tomcat-ws/bin/startup.sh
