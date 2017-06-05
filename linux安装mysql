@@ -1,0 +1,67 @@
+# 1、添加MySQL Yum源
+使用MySQL官方提供的Yum源，包含了最新的MySQL server。
+CentOS 7
+wget http://dev.mysql.com/get/mysql57-community-release-el7-7.noarch.rpm
+CentOS 6
+wget http://dev.mysql.com/get/mysql57-community-release-el6-7.noarch.rpm
+# 2、安装下载的rpm包
+CentOS 7
+yum -y localinstall mysql57-community-release-el7-7.noarch.rpm
+CentOS 6
+yum -y localinstall mysql57-community-release-el6-7.noarch.rpm
+# 3、验证rpm包是否安装成功
+yum repolist enabled | grep "mysql.*-community.*"
+
+由上图可知，yum源已经成功安装到本机
+# 4、安装最新的MySQL
+yum -y install mysql-community-server
+# 5、初始化数据库
+mysqld --user=mysql --initialize
+# 6、启动并修改root密码
+启动
+启动MySQL需要分两种情况
+实体物理机：service mysqld start
+CentOS Docker镜像：mysqld --user=mysql &
+（两种启动方式不同的原因在于该CentOS镜像为精简版，有很多包再制作的过程中没有安装。故导致systemctl命令无法启动）
+MySQL初始化之后，会生成一个临时的root密码，
+可以通过
+grep 'temporary password' /var/log/mysqld.log
+中获取，通过该密码登录之后，第一步需要先修改root密码
+ALTER USER 'root'@'localhost' IDENTIFIED BY 'admin';
+# 7、通过SHOW VARIABLES LIKE 'character_set_%'; 查看MySQL字符集情况
+# 8、通过whereis my.cnf; 查看mysql的配置文件位置
+    # 修改处1：添加以下2行  
+    [client]  
+    default-character-set=utf8  
+
+    [mysqld]  
+    #skip-grant-tables  
+    #skip-networking  
+    #  
+    # Remove leading # and set to the amount of RAM for the most important data  
+    # cache in MySQL. Start at 70% of total RAM for dedicated server, else 10%.  
+    # innodb_buffer_pool_size = 128M  
+    #  
+    # Remove leading # to turn on a very important data integrity option: logging  
+    # changes to the binary log between backups.  
+    # log_bin  
+    #  
+    # Remove leading # to set options mainly useful for reporting servers.  
+    # The server defaults are faster for transactions and fast SELECTs.  
+    # Adjust sizes as needed, experiment to find the optimal values.  
+    # join_buffer_size = 128M  
+    # sort_buffer_size = 2M  
+    # read_rnd_buffer_size = 2M  
+    datadir=/var/lib/mysql  
+    socket=/var/lib/mysql/mysql.sock  
+
+    # Disabling symbolic-links is recommended to prevent assorted security risks  
+    symbolic-links=0  
+
+    log-error=/var/log/mysqld.log  
+    pid-file=/var/run/mysqld/mysqld.pid  
+
+    # 修改处2：添加以下3行  
+    default-storage-engine=INNODB  
+    character-set-server=utf8  
+    collation-server=utf8_general_ci  
