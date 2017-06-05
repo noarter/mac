@@ -66,7 +66,5 @@ ALTER USER 'root'@'localhost' IDENTIFIED BY 'admin';
     character-set-server=utf8  
     collation-server=utf8_general_ci  
 # 9、增加新用户。(注意：mysql环境中的命令后面都带一个分号作为命令结束符)
-
 　　grant all privileges on *.* to 用户名@'%' identified by '密码' with grant option;
-
 　　flush privileges;(刷新权限设置)
