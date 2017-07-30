@@ -1,0 +1,9 @@
+一、将下载的 JetbrainsCrack-2.6.2.jar 破解补丁放在你的安装idea下面的bin的目录下面
+我的是/Applications/IntelliJ IDEA.app/Contents/bin/JetbrainsCrack-2.6.2.jar
+二、修改配置文件 
+在安装的idea下面的bin目录下面有2个文件 ： 一个是idea64.exe.vmoptions，还有一个是idea.exe.vmoptions（如上图篮框）。 
+用记事本打开 分别在最下面一行增加一行：
+-javaagent:/Applications/IntelliJ IDEA.app/Contents/bin/JetbrainsCrack-2.6.2.jar
+三、重启，填写注册码（到2099年到期） 
+重启一下软件，在进入出现有active code选择界面的时候，随便输入几个字母即可 
+能够进入应用界面则表示安装破解成功。
