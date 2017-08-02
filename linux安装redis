@@ -1,0 +1,143 @@
+下载地址，点这里Redis4.0.0.tar.gz
+或者使用命令：
+wget http://download.redis.io/releases/redis-4.0.0.tar.gz
+
+然后执行make编译源码：
+
+$ tar xzf redis-4.0.0.tar.gz
+$ cd redis-4.0.0
+$ make
+编译完成后启动
+$ src/redis-server
+
+测试效果：
+
+$ src/redis-cli ping
+PONG
+$ src/redis-cli
+redis> set foo bar
+OK
+redis> get foo
+"bar"
+make命令执行完成后，会在src目录下生成6个可执行文件，分别是redis-server、redis-cli、redis-benchmark、redis-check-aof、redis-check-dump、redis-sentinel
+
+redis-server is the Redis Server itself.（Redis服务器本身）
+redis-sentinel is the Redis Sentinel executable (monitoring and failover).（Redis集群的管理工具）
+redis-cli is the command line interface utility to talk with Redis.（与Redis进行交互的命令行客户端）
+redis-benchmark is used to check Redis performances.（Redis性能测试工具）
+redis-check-aof and redis-check-dump are useful in the rare event of corrupted data files.（AOF文件修复工具和RDB文件检查工具）
+可以使用如下命令，把redis-server和redis-cli拷贝到合适的位置（/usr/local/bin/）：
+
+sudo cp src/redis-server /usr/local/bin/
+sudo cp src/redis-cli /usr/local/bin/
+或者，使用 sudo make install可以把6个文件都拷贝过去；
+
+这样的话，只要/usr/local/bin/在PATH环境变量里，
+
+
+
+image
+我们就可以直接使用redis-server和redis-cli而不需要指定全路径了。比如：
+
+[root@localhost ~]# redis-server
+12408:C 16 Jul 21:30:29.657 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+12408:C 16 Jul 21:30:29.657 # Redis version=4.0.0, bits=64, commit=00000000, mod                                                                             ified=0, pid=12408, just started
+12408:C 16 Jul 21:30:29.657 # Warning: no config file specified, using the defau                                                                             lt config. In order to specify a config file use redis-server /path/to/redis.con                                                                             f
+12408:M 16 Jul 21:30:29.658 * Increased maximum number of open files to 10032 (i                                                                             t was originally set to 1024).
+                _._
+           _.-``__ ''-._
+      _.-``    `.  `_.  ''-._           Redis 4.0.0 (00000000/0) 64 bit
+  .-`` .-```.  ```\/    _.,_ ''-._
+ (    '      ,       .-`  | `,    )     Running in standalone mode
+ |`-._`-...-` __...-.``-._|'` _.-'|     Port: 6379
+ |    `-._   `._    /     _.-'    |     PID: 12408
+  `-._    `-._  `-./  _.-'    _.-'
+ |`-._`-._    `-.__.-'    _.-'_.-'|
+ |    `-._`-._        _.-'_.-'    |           http://redis.io
+  `-._    `-._`-.__.-'_.-'    _.-'
+ |`-._`-._    `-.__.-'    _.-'_.-'|
+ |    `-._`-._        _.-'_.-'    |
+  `-._    `-._`-.__.-'_.-'    _.-'
+      `-._    `-.__.-'    _.-'
+          `-._        _.-'
+              `-.__.-'
+
+12408:M 16 Jul 21:30:29.663 # WARNING: The TCP backlog setting of 511 cannot be                                                                              enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+12408:M 16 Jul 21:30:29.663 # Server initialized
+12408:M 16 Jul 21:30:29.663 # WARNING overcommit_memory is set to 0! Background                                                                              save may fail under low memory condition. To fix this issue add 'vm.overcommit_m                                                                             emory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.ove                                                                             rcommit_memory=1' for this to take effect.
+12408:M 16 Jul 21:30:29.664 # WARNING you have Transparent Huge Pages (THP) supp                                                                             ort enabled in your kernel. This will create latency and memory usage issues wit                                                                             h Redis. To fix this issue run the command 'echo never > /sys/kernel/mm/transpar                                                                             ent_hugepage/enabled' as root, and add it to your /etc/rc.local in order to reta                                                                             in the setting after a reboot. Redis must be restarted after THP is disabled.
+12408:M 16 Jul 21:30:29.664 * Ready to accept connections
+$ redis-cli                                                                
+redis 127.0.0.1:6379> ping
+PONG
+redis 127.0.0.1:6379> set mykey somevalue
+OK
+redis 127.0.0.1:6379> get mykey
+"somevalue"
+关闭redis服务
+
+使用如下命令可以关闭redis服务
+
+$ redis-cli shutdown
+
+配置初始化脚本，以服务方式启动redis
+
+拷贝redis-4.0.0下的utils目录下的初始化脚本到/etc/init.d目录，并重命名文件为：redis_+端口号
+sudo cp utils/redis_init_script /etc/init.d/redis_6379
+确保redis_6379文件内的REDISPORT变量是你使用的端口号
+
+新建文件夹/etc/redis/ ，并拷贝redis-4.0.0下的 redis.conf 文件到到改目录下，使用端口号作为文件名
+
+sudo mkdir /etc/redis
+sudo cp redis.conf /etc/redis/6379.conf
+创建用来存储redis持久化文件的目录（6379为端口号）
+sudo mkdir -p /var/redis/6379
+
+编辑6379.conf文件，修改如下几个参数：
+
+Set daemonize to yes (by default it is set to no).（设置daemonize 为yes，默认为no）
+Set the pidfile to /var/run/redis_6379.pid (modify the port if needed).（如果端口号不是6379，则需要修改）
+Change the port accordingly. In our example it is not needed as the default port is already 6379.（如果端口号不是6379，则需要修改）
+Set your preferred loglevel.（可以设置日志等级，注释上有说明）
+Set the logfile to /var/log/redis/redis_6379.log（设置日志文件路径。需要在log下新建redis文件夹）
+Set the dir to /var/redis/6379 (very important step!)（设置工作目录为 /var/redis/6379）
+这时候就可以使用如下两条命令（任选其一）来启动redis，并测试
+[root@localhost /]# service redis_6379 start
+Starting Redis server...
+[root@localhost /]# redis-cli
+127.0.0.1:6379> ping
+PONG
+127.0.0.1:6379>
+[root@localhost /]# /etc/init.d/redis_6379 start
+Starting Redis server...
+设置开机自动启动
+
+编辑/etc/init.d/redis_6379文件，在#!/bin/bash 之后添加如下两行。
+# chkconfig: 2345 10 90 
+# description: redis_6379 service manage...
+其中2345是默认启动级别，级别有0-6共7个级别。
+
+等级0表示：表示关机 　　
+　　等级1表示：单用户模式 　　
+　　等级2表示：无网络连接的多用户命令行模式 　　
+　　等级3表示：有网络连接的多用户命令行模式 　　
+　　等级4表示：不可用 　　
+　　等级5表示：带图形界面的多用户模式 　　
+　　等级6表示：重新启动
+
+10是启动优先级，90是停止优先级，优先级范围是0－100，数字越大，优先级越低
+将redis_6379放入linux启动管理体系中
+chkconfig --add redis_6379
+查看redis_6379服务在各运行级状态
+chkconfig --list redis_6379
+
+image
+重启服务器测试效果：
+reboot
+重启完成后，直接使用redis-cli连接redis，效果如下：
+
+Using username "root".
+Last login: Sun Jul 16 21:30:16 2017 from 192.168.10.1
+[root@localhost ~]# redis-cli
+127.0.0.1:6379>
+配置成功，完！
