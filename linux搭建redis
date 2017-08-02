@@ -1,0 +1,86 @@
+依赖包
+yum install gcc gcc-c++ make cmake zlib zlib-devel readline readline-devel tkutil tk tkutil-devel tk-devel openssl openssl-devel wget ntp vim tcl -y 
+
+下载
+wget http://download.redis.io/releases/redis-4.0.1.tar.gz
+
+解压
+tar -zxvf redis-4.0.1.tar.gz
+
+拷贝到目录
+mv redis-4.0.1 /usr/local/redis
+
+cd /usr/local/redis
+
+make && make install
+
+创建一个redis实力
+/usr/local/redis/utils
+sh ./install_server.sh
+6379 端口
+
+修改默认（Master）redis IP
+vi /etc/redis/6379.conf
+# line 70: change to own IP or 0.0.0.0
+bind 0.0.0.0
+
+# line 377: add follows if you need
+# min-slaves-to-write : if number of slave Hosts are online, Master Host accepts write requests
+# min-slaves-max-lag : decision time(sec) for online if Slave Hosts return answer within specified time
+min-slaves-to-write 2
+min-slaves-max-lag 10
+
+重启服务
+/etc/init.d/redis_6379 restart
+
+高可用配置（Master）redis-sentinel IP  
+cp /usr/local/redis/sentinel.conf /etc/redis/redis-sentinel.conf  
+
+# line 98: change [sentinel monitor (any name) (Master's IP) (Master's Port) (Quorum)]
+# Quorum ⇒ run failover when the specified number of Sentinel servers look Master is down
+sentinel monitor mymaster 172.16.19.12 6379 1
+
+# line 73: authentication password for Master
+sentinel auth-pass mymaster password
+
+# line 82: the term Sentinel server looks Master is down (30 sec by default below)
+sentinel down-after-milliseconds mymaster 30000
+
+# line 90 number of Slaves to be changed when running failover
+sentinel parallel-syncs mymaster 1 
+
+软连接redis-sentinel
+cp redis-benchmark redis-cli redis-server redis-sentinel /usr/bin/
+
+启动redis-sentinel
+redis-sentinel /etc/redis/redis-sentinel.conf
+redis-sentinel /etc/redis/sentinel.conf 
+
+redis-sentinel连接测试
+redis-cli -p 26379 
+sentinel get-master-addr-by-name mymaster 
+sentinel master mymaster 
+sentinel slaves mymaster
+
+修改默认（Slave）redis IP
+vi /etc/redis/6379.conf
+# line 70: change to own IP or 0.0.0.0
+bind 0.0.0.0
+
+# line 206: add Master server's IP and port
+slaveof 172.16.19.12 6379
+
+# line 213: add connection password set on Master Host
+masterauth password
+
+# line 241: verify parameter (set Slave Hosts read-only)
+slave-read-only yes
+
+重启服务
+/etc/init.d/redis_6379 restart
+
+验证主机
+redis-cli info Replication
+
+获取钥匙
+redis-cli get key_on_master 
