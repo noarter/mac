@@ -1,0 +1,34 @@
+1、查看openssh的版本
+  ssh -V (使用ssh -V 命令来查看openssh的版本，版本必须大于4.8p1，低于的这个版本需要升级。)
+2、创建sftp组
+  groupadd sftp
+3、创建一个sftp用户，用户名为mysftp，密码为mysftp
+  修改用户密码和修改Linux用户密码是一样的。
+  useradd -g sftp -s /bin/false mysftp  //用户名
+  passwd mysftp  //密码
+4、sftp组的用户的home目录统一指定到/data/sftp下，按用户名区分，这里先新建一个mysftp目录，然后指定mysftp的home为/data/sftp/mysftp
+  mkdir -p /data/sftp/mysftp    
+  usermod -d /data/sftp/mysftp mysftp   
+5、配置sshd_config
+  文本编辑器打开 /etc/ssh/sshd_config
+  # Subsystem      sftp    /usr/libexec/openssh/sftp-server
+  在文件最后面添加如下几行内容，然后保存。
+    Subsystem       sftp    internal-sftp      
+    Match Group sftp      
+    ChrootDirectory /data/sftp/%u      
+    ForceCommand    internal-sftp      
+    AllowTcpForwarding no      
+    X11Forwarding no    
+6、设定Chroot目录权限
+  chown root:sftp /data/sftp/mysftp    
+  chmod 755 /data/sftp/mysftp 
+7、建立SFTP用户登入后可写入的目录
+  mkdir /data/sftp/mysftp/upload    
+  chown mysftp:sftp /data/sftp/mysftp/upload    
+  chmod 755 /data/sftp/mysftp/upload 
+8、修改/etc/selinux/config
+  将文件中的SELINUX=enforcing 修改为 SELINUX=disabled ，然后保存。输入setenforce 0  
+9、重启sshd服务
+  service sshd restart 
+10、验证sftp环境
+  sftp mysftp@127.0.0.1 
