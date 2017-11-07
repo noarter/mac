@@ -83,4 +83,29 @@ validate_password_special_char_count：密码至少要包含的特殊字符数�
 2/STRONG：检查长度、数字、大小写、特殊字符字典文件。
 
 # 11、主从复制
-(1)
+(1)主mysql的my.cnf:
+#设置二进制日志
+sql_mode=NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES
+log_bin=mysqlbin-log
+server_id=1
+innodb_flush_log_at_trx_commit=1
+sync_binlog=1
+log-slave-updates
+(2)从mysql的my.cnf:
+sql_mode=NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLE
+log-bin=mysql-bin
+server_id=2
+log-slave-updates
+(3)主mysql:
+mysql>GRANT REPLICATION SLAVE ON *.* TO ‘mysql140’@‘10.10.1.140’ IDENTIFIED BY ‘mysql140’;
+mysql>FLUSH PRIVILEGES;
+mysql>show master status;
+(4)从mysql:
+mysql>CHANGE MASTER TO
+     >MASTER_HOST=’10.10.1.139’,
+     >MASTER_USER=’mysql140’,
+     >MASTER_PASSWORD=’mysql140’,
+     >MASTER_LOG_FILE=’mysqlbin-log.000001’,
+     >MASTER_LOG_POS=154;
+mysql>show slave status \G;
+mysql>start slave;
