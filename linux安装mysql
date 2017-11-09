@@ -82,17 +82,12 @@ validate_password_special_char_count：密码至少要包含的特殊字符数�
 
 # 11、主从复制
 (1)主mysql的my.cnf:
-#设置二进制日志
-sql_mode=NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES
-log_bin=mysqlbin-log
-server_id=1
-innodb_flush_log_at_trx_commit=1
-sync_binlog=1
+log-bin=mysqlbin-log
+server-id=1
 log-slave-updates
 (2)从mysql的my.cnf:
-sql_mode=NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLE
 log-bin=mysql-bin
-server_id=2
+server-id=2
 log-slave-updates
 (3)主mysql:
 mysql>GRANT REPLICATION SLAVE ON *.* TO ‘mysql140’@‘10.10.1.140’ IDENTIFIED BY ‘mysql140’;
@@ -110,21 +105,173 @@ mysql>start slave;
 
 #12、主主复制
 -- 10.10.1.140
-GRANT REPLICATION SLAVE ON *.* TO 'mysql139'@'10.10.1.139' IDENTIFIED BY 'mysql139';
-flush privileges;
-change master to master_host='10.10.1.139',master_user='mysql140',master_password='mysql140',master_log_file='mysql-bin.000001',master_log_pos=154;
+my.cnf 配置如下：　
+server-id=1
+log-bin=mysql-bin
+auto_increment_increment=2
+auto_increment_offset=1
+log-slave-updates
+skip-name-resolve
+
+mysql>GRANT REPLICATION SLAVE ON *.* TO 'mysql139'@'10.10.1.139' IDENTIFIED BY 'mysql139';
+mysql>flush privileges;
+mysql>change master to master_host='10.10.1.139',master_user='mysql140',master_password='mysql140',master_log_file='mysql-bin.000001',master_log_pos=154;
 
 -- 10.10.1.139
-GRANT REPLICATION SLAVE ON *.* TO 'mysql140'@'10.10.1.140' IDENTIFIED BY 'mysql140';
-flush privileges;
-change master to master_host='10.10.1.140',master_user='mysql139',master_password='mysql139',master_log_file='mysql-bin.000002',master_log_pos=154;
+my.cnf 配置如下：
+server-id=2
+log-bin=mysql-bin
+auto_increment_increment=2
+auto_increment_offset=2
+log-slave-updates
+skip-name-resolve
+
+mysql>GRANT REPLICATION SLAVE ON *.* TO 'mysql140'@'10.10.1.140' IDENTIFIED BY 'mysql140';
+mysql>flush privileges;
+mysql>change master to master_host='10.10.1.140',master_user='mysql139',master_password='mysql139',master_log_file='mysql-bin.000002',master_log_pos=154;
 
 #13、haproxy安装
 yum -y install haproxy
 cd /etc/haproxy/
-vi haproxy.cfg
+vi haproxy.cfg加入：
+listen stats
+        mode http
+        bind *:9999
+        stats enable
+        stats hide-version
+        stats uri /haproxyadmin?stats
+        stats realm Haproxy\ Statistics
+        stats auth admin:admin
+
+listen mysql
+        bind *:3306
+        mode tcp
+        balance leastconn
+        server mysql139 10.10.1.139:3306 check port 3306 maxconn 300
+        server mysql140 10.10.1.140:3306 check port 3306 maxconn 300
 
 #14、keepalived安装
-yum -y install keepalived
+yum install -y readline-devel pcre-devel openssl-devel gcc gcc-c++ make automake libtool zlib-devel libocci-dev libocci lua zlib cmake postgresql-devel  popt-devel keepalived
 cd /etc/keepalived/
+--10.10.1.147
 vi keepalived.conf
+! Configuration File for keepalived
+
+global_defs {
+    #notificationd LVS_DEVEL
+}
+
+vrrp_script chk_haproxy {
+    script "/etc/keepalived/haproxy_check.sh"
+    interval 2
+}
+vrrp_instance VI_1 {
+    state BACKUP
+    interface eth1
+    virtual_router_id 11
+    priority 50
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 1111
+    }
+    virtual_ipaddress {
+       10.10.1.148/24 dev eth1 label eth1:0
+    }
+    track_script {
+       chk_haproxy
+    }
+}
+
+virtual_server 10.10.1.148 9999{
+    delay_loop 6
+    lb_algo wrr
+    lb_kind DR
+    nat_mask 255.255.255.0
+    persistence_timeout 50
+    protocol TCP
+
+    real_server 10.10.1.147 9999{
+        weight 1
+        HTTP_GET {
+            url {
+              path /haproxyadmin?stats
+              status_code 401
+            }
+            connect_timeout 3
+            nb_get_retry 3
+            delay_before_retry 3
+        }
+    }
+}
+
+--创建haproxy_check.sh文件
+vi haproxy_check.sh
+# vi /etc/keepalived/haproxy_check.sh#!/bin/bash
+#
+if [ $(ps -C haproxy --no-header | wc -l) -eq 0 ]; then
+       /etc/init.d/keepalived stop
+fi
+
+
+--10.10.1.146
+vi keepalived.conf
+ Configuration File for keepalived
+
+global_defs {
+   #notificationd LVS_DEVEL
+}
+
+vrrp_script chk_haproxy{
+    script "/etc/keepalived/haproxy_check.sh"
+    interval 2
+}
+vrrp_instance VI_1 {
+    state MASTER
+    interface eth1
+    virtual_router_id 11
+    priority 130
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 1111
+    }
+    virtual_ipaddress {
+        10.10.1.148/24 dev eth1 label eth1:0
+    }
+    track_script {
+       chk_haproxy
+    }
+    #notify_backup "/etc/init.d/haproxy restart"
+    #notify_fault "/etc/init.d/haproxy stop"
+}
+
+virtual_server 10.10.1.148 9999{
+    delay_loop 6
+    lb_algo wrr
+    lb_kind DR
+    nat_mask 255.255.255.0
+    persistence_timeout 50
+    protocol TCP
+
+    real_server 10.10.1.146 9999{
+        weight 1
+        HTTP_GET {
+            url {
+              path /haproxyadmin?stats
+              status_code 401
+            }
+            connect_timeout 3
+            nb_get_retry 3
+            delay_before_retry 3
+        }
+    }
+}
+
+--创建haproxy_check.sh文件
+vi haproxy_check.sh
+# vi /etc/keepalived/haproxy_check.sh#!/bin/bash
+#
+if [ $(ps -C haproxy --no-header | wc -l) -eq 0 ]; then
+       /etc/init.d/keepalived stop
+fi
