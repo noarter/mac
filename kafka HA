@@ -1,0 +1,149 @@
+Zookeeper+Kafka集群安装过程。准备3台虚拟机, 系统是Centos64服务版。
+#1.jdk安装
+#2.kafka安装
+wget http://mirror.bit.edu.cn/apache/kafka/1.0.0/kafka_2.11-1.0.0.tgz 
+#3.zookeeper安装
+wget http://mirror.bit.edu.cn/apache/zookeeper/zookeeper-3.4.11/zookeeper-3.4.11.tar.gz
+#4.每台机器配置如下:
+$ cat /etc/hosts
+# zookeeper hostnames:
+10.10.1.139 zk1
+10.10.1.140 zk2
+10.10.1.146 zk3
+#5.每台机器上环境变量配置
+vi /etc/profile
+export KAFKA_HOME=/root/kafka_2.11-1.0.0
+export ZK_HOME=/root/zookeeper-3.4.11
+export JAVA_HOME=/root/jdk1.8.0_112
+export PATH=$JAVA_HOME/bin:$JAVA_HOME/jre/bin:$KAFKA_HOME/bin:$ZK_HOME/bin:$PATH
+export CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar:$JAVA_HOME/jre/lib/rt.jar
+#6.每台机器上运行:
+
+$ source /etc/profile
+
+$ mkdir -p /var/lib/zookeeper
+
+$ cd $ZK_HOME/conf
+
+$ cp zoo_sample.cfg zoo.cfg
+
+$ vi zoo.cfg
+
+...
+
+dataDir=/var/lib/zookeeper
+
+# the port at which the clients will connect clientPort=2181
+
+# zookeeper cluster
+
+server.1=zk1:2888:3888
+
+server.2=zk2:2888:3888
+
+server.3=zk3:2888:3888
+
+#7.每台机器上生成myid:
+
+zk1:
+
+$ echo "1" > /var/lib/zookeeper/myid
+
+zk2:
+
+$ echo "2" > /var/lib/zookeeper/myid
+
+zk3:
+
+$ echo "3" > /var/lib/zookeeper/myid
+
+#8.每台机器上启动zookeeper:
+
+$ zkServer.sh start
+
+查看状态:
+
+$ zkServer.sh status
+
+#9.配置$KAFKA_HOME/config/server.properties
+mkdir -p /var/lib/kafka/log
+
+我们安装3个broker，分别在3个vm上：zk1，zk2，zk3:
+
+zk1:
+
+$ vi /etc/sysconfig/network
+
+NETWORKING=yes
+HOSTNAME=zk1
+
+$ vi $KAFKA_HOME/config/server.properties
+
+broker.id=0
+port=9092
+host.name=zk1
+...
+log.dirs=/var/lib/kafka/logs
+num.partitions=3
+...
+zookeeper.contact=zk1:2181,zk2:2181,zk3:2181
+
+zk2:
+
+$ vi /etc/sysconfig/network
+
+NETWORKING=yes
+HOSTNAME=zk2
+
+$ vi $KAFKA_HOME/config/server.properties
+
+broker.id=1
+port=9092
+host.name=zk2
+...
+log.dirs=/var/lib/kafka/logs
+num.partitions=3
+...
+zookeeper.contact=zk1:2181,zk2:2181,zk3:2181
+
+zk3:
+
+$ vi /etc/sysconfig/network
+
+NETWORKING=yes
+HOSTNAME=zk3
+
+$ vi $KAFKA_HOME/config/server.properties
+
+broker.id=2
+port=9092
+host.name=zk3
+...
+log.dirs=/var/lib/kafka/logs
+num.partitions=3
+...
+zookeeper.contact=zk1:2181,zk2:2181,zk3:2181
+
+#10.启动zookeeper服务, 在zk1,zk2,zk3上分别运行：
+
+$ zkServer.sh start
+
+#11.启动kafka服务, 在zk1,zk2,zk3上分别运行：
+
+$ kafka-server-start.sh $KAFKA_HOME/config/server.properties &
+
+#12.新建一个TOPIC(replication-factor=num of brokers)
+
+$ kafka-topics.sh --create --topic test --replication-factor 3 --partitions 3 --zookeeper zk1:2181
+
+#13.假设我们在zk2上，开一个终端，发送消息至kafka（zk2模拟producer）
+
+$ kafka-console-producer.sh --broker-list zk1:9092 --sync --topic test
+
+在发送消息的终端输入：Hello Kafka
+
+#14.假设我们在zk3上，开一个终端，显示消息的消费（zk3模拟consumer）
+
+$ kafka-console-consumer.sh --zookeeper zk1:2181 --topic test --from-beginning
+
+在消费消息的终端显示：Hello Kafka
