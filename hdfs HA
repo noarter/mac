@@ -1,0 +1,261 @@
+一、安装Zookeeper
+由于环境有限，所以在仅有的4台虚拟机上完成多个操作；
+a.在4台虚拟中选3台安装Zookeeper,我选 zk1 zk2 zk3
+b.在4台虚拟中选3台作为JournalNode的节点，我选zk2  zk3  zk4
+c..在4台虚拟中选2台作为NameNode ，我选zk1(Active)   zk4(Standby)
+
+1.解压并移动
+下载并解压zookper压缩包，将zookeeper复制到/usr/local/zookeeper目录下；
+
+2.配置Zookeeper
+$ mkdir -p /var/lib/zookeeper
+$ cd /usr/local/zookeeper/
+$ vim /conf/zoo.cfg
+#写入 
+tickTime=2000
+dataDir=/var/lib/zookeeper  #指定Zookeeper的Data目录
+clientPort=2181
+initLimit=5
+syncLimit=2
+# 3台节点
+server.1=zk1:2888:3888
+server.2=zk2:2888:3888
+server.3=zk3:2888:3888
+
+3.配置zk1的zookeeper的环境变量
+$ vim /root/.bash_profile
+#写入
+PATH=$PATH:/usr/local/zookeeper-3.4.6/bin
+
+4.覆盖zk2 和 zk3的zookeeper配置文件和.bash_profile
+
+5.创建myid
+分别在zk1 zk2 zk3的dataDir目录中创建一个myid的文件，文件内容分别为1，2，3（即server的id）
+zk1:
+$ echo "1" > /var/lib/zookeeper/myid
+zk2:
+$ echo "2" > /var/lib/zookeeper/myid
+zk3:
+$ echo "3" > /var/lib/zookeeper/myid
+
+6.启动zookeeper
+
+$ cd /usr/local/zookeeper
+$ bin/zkServer.sh start
+# 显示：Starting zookeeper ... STARTED 表示启动成功
+
+二、免密码登录
+zk1 zk4 两台NameNode相互做免密码登录：
+zk1:
+$ ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa
+$ scp .ssh/id_dsa.pub root@zk2:/root
+$ scp .ssh/id_dsa.pub root@zk3:/root
+$ scp .ssh/id_dsa.pub root@zk4:/root
+#然后分别登录这三台虚拟机，将公钥覆盖到公钥中
+$ cat /root/id_dsa.pub >> ~/.ssh/authorized_keys
+
+三、配置HDFS  高可用
+1.zk1.zk2.zk3,zk4下载hadoop
+wget https://mirrors.tuna.tsinghua.edu.cn/apache/hadoop/common/hadoop-2.8.2/hadoop-2.8.2.tar.gz
+
+2.zk1,zk2,zk3,zk4配置HDFS配置文件
+$ cd /root/hadoop-2.8.2/etc/hadoop/
+$ vi hadoop-env.sh
+ #写入
+   export JAVA_HOME=/root/jdk1.8.0_112
+
+$ vi hdfs-site.xml
+#写入
+<configuration>
+  #配置NameService 名字随便起
+  <property>
+    <name>dfs.nameservices</name>
+    <value>testin</value>
+  </property>
+  # 这里的最后一个名字就是上面的nameService   value是两台NameNode的节点
+  <property>
+    <name>dfs.ha.namenodes.testin</name>
+    <value>zk1,zk4</value>
+  </property>
+  # zk1和zk4的rpc地址
+<property>
+  <name>dfs.namenode.rpc-address.testin.zk1</name>
+  <value>zk1:8020</value>
+</property>
+<property>
+  <name>dfs.namenode.rpc-address.testin.zk4</name>
+  <value>zk4:8020</value>
+</property>
+# zk1和zk4的http地址
+<property>
+  <name>dfs.namenode.http-address.testin.zk1</name>
+  <value>zk1:50070</value>
+</property>
+<property>
+  <name>dfs.namenode.http-address.testin.zk4</name>
+  <value>zk4:50070</value>
+</property>
+# 3台JournalNode地址，后台跟名字，但后面的名字不能与nameService相同
+<property>
+  <name>dfs.namenode.shared.edits.dir</name>
+ <value>qjournal://zk2:8485;zk3:8485;zk4:8485/testin5200</value>
+</property>
+#配置客户端调用接口
+<property>
+  <name>dfs.client.failover.proxy.provider.testin</name>
+ <value>org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider</value>
+</property>
+<property>
+  <name>dfs.ha.fencing.methods</name>
+  <value>sshfence</value>
+</property>
+<property>
+  <name>dfs.ha.fencing.ssh.private-key-files</name>
+  <value>/root/.ssh/id_dsa</value>
+</property>
+<property>
+  <name>dfs.ha.fencing.methods</name>
+  <value>sshfence</value>
+</property>
+<property>
+  <name>dfs.ha.fencing.ssh.connect-timeout</name>
+  <value>30000</value>
+</property>
+#配置journalnode目录
+<property>
+  <name>dfs.journalnode.edits.dir</name>
+  <value>/opt/journalnode</value>
+</property>
+<property>
+   <name>dfs.ha.automatic-failover.enabled</name>
+   <value>true</value>
+ </property>
+</configuration>
+
+$ vi core-site.xml
+ <configuration>
+  #这里的value就是NameService的名字
+   <property>
+        <name>fs.defaultFS</name>
+        <value>hdfs://testin</value>
+    </property>
+    <property>
+        <name>hadoop.tmp.dir</name>
+        <value>/opt/hadoop</value>
+    </property>
+#3台zookeeper节点
+ <property>
+   <name>ha.zookeeper.quorum</name>
+   <value>zk1:2181,zk2:2181,zk3:2181</value>
+ </property>
+</configuration>
+
+3.启动三台JournalNode zk2 zk3 zk4
+# 前提是要先把zookeeper启动起来
+$ sbin/hadoop-daemon.sh start journalnode
+
+注：在启动JournalNode和其他项时，没有其他好的方法较验是否启动成功，只能查看日志文件，如果日志文件没有报错，则表示启动成功；
+
+4.在其中一个NameNode上格式化hadoop.tmp.dir 并初始化
+zk1:
+$ bin/hdfs namenode -format
+
+5.把格式化后的元数据拷备到另一台NameNode节点上
+$ scp -r /opt/hadoop root@zk4:/opt/hadoop
+
+6.启动NameNode
+
+zk1:
+$ sbin/hadoop-daemon.sh start namenode
+
+zk4:
+$ bin/hdfs namenode -bootstrapStandby
+$ sbin/hadoop-daemon.sh start namenode
+
+7.初始化zkfc
+zk1:
+$ bin/hdfs zkfc -formatZK
+
+8.全面停止并全面启动
+zk1:
+$ sbin/stop-dfs.sh
+$ sbin/start-dfs.sh
+
+9.访问NameNode
+访问两台NameNode zk1和zk4的50070端口，会显示一个端口是Active   另一个端口是Standby 如下图：
+http://zk1:50070   http://zk4:50070
+
+注：如果zk1突然挂掉了，那么node8备用的NameNode会自动的补上，替换为Active，测试方法：Kill zk1 的nameNode进程，然后再刷新zk4：
+$ jps #ps是显示当前系统进程 ，jps就是显示当前系统的java 进程
+$ kill -9 进程ID  #杀掉进程
+
+四、使用Yarn来调度HDFS
+#先所有的Hadoop相关进程
+$ stop-dfs.sh
+
+1.配置yarn-site.xml
+复制代码
+$ cd /usr/local/hadoop/
+$ vim etc/hadoop/yarn-site.xml
+<property>
+   <name>yarn.resourcemanager.ha.enabled</name>
+   <value>true</value>
+ </property>
+# 该cluster-id不能与nameService相同
+ <property>
+   <name>yarn.resourcemanager.cluster-id</name>
+   <value>tetsin521</value>
+ </property>
+#指定2台Resource Manager (即Name Node )节点
+ <property>
+   <name>yarn.resourcemanager.ha.rm-ids</name>
+   <value>rm1,rm2</value>
+ </property>
+ <property>
+   <name>yarn.resourcemanager.hostname.rm1</name>
+   <value>node5</value>
+ </property>
+ <property>
+   <name>yarn.resourcemanager.hostname.rm2</name>
+   <value>node8</value>
+ </property>
+#指定zookeeper 节点
+ <property>
+	   <name>yarn.resourcemanager.zk-address</name>
+	   <value>zk2:2181,zk3:2181,zk4:2181</value>
+ </property>
+  <property>
+        <name>yarn.nodemanager.aux-services</name>
+        <value>mapreduce_shuffle</value>
+    </property>
+ </configuration>
+复制代码
+2.配置etc/hadoop/mapred-site.xml
+
+复制代码
+$ vim etc/hadoop/mapred-site.xml
+<configuration>
+    <property>
+        <name>mapreduce.framework.name</name>
+        <value>yarn</value>
+    </property>
+</configuration>
+复制代码
+3.将mapred-site.xml yarn-site.xml 覆盖到其他的节点上
+
+4.启动 yarn
+复制代码
+#单独启动yarn使用命令：
+ $ sbin/start-yarn.sh
+ $ sbin/stop-yarn.sh
+#启动所有Hadoop相关进程使用命令
+$ start-all.sh
+#启动完成以后，另一台NameNode需要手动启动yarn
+$ start-yarn.sh
+复制代码
+
+5.访问 
+访问yarn的端口 http://zk1:8088  http://zk4:8088 
+说明：当访问Node5的时候能够正常的显示界面，并且在Nodes下还能加载出集群的所有节点，但是访问node8的时候，则不会显示，而是提示页面将跳到Active的Resource Manager (RM)节点上,然后页面就跳了；
+
+当node5突然挂掉了，zookeeper会立刻将RM切换到node8上，将node8做为Active的RM，然后在Nodes下会在几十秒内加载出所有节点；
