@@ -1,0 +1,57 @@
+跨域及Cookie问题
+对于NativeApp来说，没有跨域的问题，但对于WebApp来说，需要处理浏览器跨域限制问题，可以通过浏览器层面的允许跨域特殊处理，或者搭建一个代理服务器来中转请求。UC浏览器PC版的抢票专家插件采用了浏览器层面允许跨域来处理跨域问题。除了跨域问题，每个请求的请求头必须将Cookie带上，不然无法通过12306的验证。jQuery的AJAX函数请求跨域接口时默认不带Cookie，需要设置withCredentials: true以便在请求头中自动带上Cookie字段。
+
+示例：
+
+$.ajax({
+  url: '',
+  xhrFields: {
+    withCredentials: true
+  }
+}).done(fn);
+这个12306的Cookie是哪里来的呢，是通过AJAX取12306的查询页面/otn/leftTicket/init，响应头上有Set-Cookie:xxx字段，此时在抢票插件页面已经"种下"12306的Cookie。接下来的任何请求只要设置了withCredentials: true，都会在请求头中带上Cookie。
+
+接口介绍
+跑通一个出票流程的必须接口，从上到下依次调用：（还有几个其他流程分支接口）
+
+获取12306Cookie：/otn/leftTicket/init GET
+查询余票信息：/otn/leftTicket/queryT GET
+获取全部城市/热门城市：/otn/resources/js/framework/station_name.js|favorite_name.js GET
+获取图片验证码：/otn/passcodeNew/getPassCodeNew GET
+登录：/otn/login/loginUserAsyn POST
+拿到乘客信息：/otn/confirmPassenger/getPassengerDTOs GET
+提交订单：/otn/confirmPassenger/autoSubmitOrderRequest POST
+进入队列：/otn/confirmPassenger/getQueueCountAsync POST
+确认出票：/otn/confirmPassenger/confirmSingleForQueueAsys POST
+等待出票：/otn/confirmPassenger/queryOrderWaitTime GET
+典型接口
+Request：
+
+POST https://kyfw.12306.cn/otn/confirmPassenger/autoSubmitOrderRequest HTTP/1.1
+Host: kyfw.12306.cn
+Connection: keep-alive
+Content-Length: 676
+Accept: */*
+Origin: http://piao.uc.cn
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 UBrowser/5.5.7852.9 Safari/537.36
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Referer: http://piao.uc.cn/?from=ucstore
+Accept-Encoding: gzip, deflate
+Accept-Language: zh-CN,zh;q=0.8
+Cookie: JSESSIONID=0A01D94EFCB5F2DE3E5FAAB44A38184A0BC4D778AE; __NRF=E1F19B83B7E5E2FE9A7AF5ED5B0900A2; BIGipServerotn=1322844426.64545.0000; current_captcha_type=Z
+
+secretStr=车票的安全码&train_date=2016-01-09&tour_flag=dc&purpose_codes=ADULT&query_from_station_name=%E5%8C%97%E4%BA%AC&query_to_station_name=%E6%88%90%E9%83%BD&cancel_flag=2&bed_level_order_num=000000000000000000000000000000&passengerTicketStr=乘客实名认证信息&oldPassengerStr=乘客实名认证信息
+Response：
+
+HTTP/1.1 200 OK
+Date: Wed, 09 Dec 2015 11:40:52 GMT
+Server: Apache-Coyote/1.1
+X-Powered-By: Servlet 2.5; JBoss-5.0/JBossWeb-2.1
+ct: c1_78
+Content-Type: application/json;charset=UTF-8
+Content-Length: 291
+X-Via: 1.1 wzhdx87:3 (Cdn Cache Server V2.0)
+Connection: keep-alive
+X-Cdn-Src-Port: 59557
+
+{"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,"data":{"result":"P3#32175B56E10DD596F9FDEFD9051A13C4#1000003030002523000000001#1","isNeedPassCode":"Y","submitStatus":true,"smokeStr":""},"messages":[],"validateMessages":{}}
