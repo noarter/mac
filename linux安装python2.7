@@ -1,0 +1,44 @@
+1、安装 sqlite-devel
+因为 Flask 应用程序可能使用能 Sqlite 数据库，所以这个得装上（之前因为没装这个，导致 Python 无法导入 sqlite3 库。
+
+当然，也可以从源码编译安装。
+
+yum install sqlite-devel -y
+2、安装 Python 2.7
+wget https://www.python.org/ftp/python/2.7.8/Python-2.7.8.tgz
+tar xf Python-2.7.8.tgz
+cd Python-2.7.8
+./configure --prefix=/usr/local
+make && make install
+安装成功之后，你可以在 /usr/local/bin/python2.7 找到 Python 2.7。
+
+3、安装 setuptools + pip
+这里需要注意，一定要使用 python2.7 来执行相关命令。
+
+# First get the setup script for Setuptools:
+wget https://bitbucket.org/pypa/setuptools/raw/bootstrap/ez_setup.py
+
+# Then install it for Python 2.7 :
+python2.7 ez_setup.py
+
+# Now install pip using the newly installed setuptools:
+easy_install-2.7 pip
+
+# With pip installed you can now do things like this:
+pip2.7 install [packagename]
+pip2.7 install --upgrade [packagename]
+pip2.7 uninstall [packagename]
+4、使用 virtualenv
+# Install virtualenv for Python 2.7 and create a sandbox called my27project:
+pip2.7 install virtualenv
+virtualenv-2.7 my27project
+
+# Check the system Python interpreter version:
+python --version
+# This will show Python 2.6.6
+
+# Activate the my27project sandbox and check the version of the default Python interpreter in it:
+source my27project/bin/activate
+python --version
+# This will show Python 2.7.X
+deactivate
