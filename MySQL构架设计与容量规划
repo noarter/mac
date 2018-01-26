@@ -1,0 +1,112 @@
+用sysbench压测MySQL，通过orzdba监控工具分析机器的容量
+
+容量评估4个重要指标：
+LOAD：服务器的负载，在Linux中可以通过top命令查看load average
+CPU：CPU的使用率，在Linux中可以通过top和cat /proc/Stat命令查看
+QPS：Queries Per Second意思是“每秒查询率”，是一台服务器每秒能够相应的查询次数，是对一个特定的查询服务器在规定时间内所处理流量多少的衡量标准。
+TPS：Transactions PerSecond，也就是事务数/秒。它是软件测试结果的测量单位。一个事务是指一个客户机向服务器发送请求然后服务器做出反应的过程。
+     客户机在发送请求时开始计时，收到服务器响应后结束计时，以此来计算使用的时间和完成的事务个数，最终利用这些信息来估计得分。
+     客户机使用加权协函数平均方法来计算客户机的得分，测试软件就是利用客户机的这些信息使用加权协函数平均方法来计算服务器端的整体TPS得分。
+容量评估-QPS评估
+峰值QPS=(总的PV * 80%)/(60 * 60 * 24 * 20%)
+机器数=总的峰值QPS/压测得出的单台机器极限QPS
+
+1.安装mysql
+yum install wget
+wget https://repo.mysql.com//mysql57-community-release-el6-11.noarch.rpm
+rpm -Uvh mysql57-community-release-el6-11.noarch.rpm 
+yum repolist all | grep mysql
+yum install mysql-community-server
+service mysqld start
+grep 'temporary password' /var/log/mysqld.log
+2.编译安装sysbench
+# 安装依赖包
+yum -y install make automake libtool pkgconfig libaio-devel vim-common
+yum -y install mysql-devel
+
+# 编译源码安装，下载地址：https://codeload.github.com/akopytov/Sysbench/zip/1.0.5
+unzip sysbench-1.0.5.zip
+cd sysbench-1.0.5
+./autogen.sh
+./configure --with-mysql-includes=/usr/include/mysql --with-mysql-libs=/usr/lib64/mysql   # 注意修改路径
+make && make install
+3.在压测的MySQL上创建一个空的test数据库
+# 已有test库的话先drop掉
+drop database test;
+create database test;
+# 创建压测MySQL用户
+grant all privileges on *.* to 'yyq'@'localhost' identified by '1234';
+grant all privileges on *.* to 'yyq'@'127.0.0.1' identified by '1234';
+
+4.安装tcprstat
+$ wget http://github.com/downloads/Lowercases/tcprstat/tcprstat-static.v0.3.1.x86_64
+$ cp tcprstat-static.v0.3.1.x86_64 /usr/bin/tcprstat
+$ chmod u+sx /usr/bin/tcprstat
+
+5.安装prel
+$ yum install perl-Test-Simple.x86_64 perl-Time-HiRes perl-ExtUtils-CBuilder perl-ExtUtils-MakeMaker perl-DBD-MySQL perl-DBI
+
+6.安装version模块
+$ wget http://search.cpan.org/CPAN/authors/id/J/JP/JPEACOCK/version-0.99.tar.gz
+$ tar -zxvf version-0.99.tar.gz
+$ cd version-0.99
+$ perl Makefile.PL
+$ make 
+$ make test
+$ make install
+
+7.安装Module-Build模块
+$ wget http://search.cpan.org/CPAN/authors/id/K/KW/KWILLIAMS/Module-Build-0.31.tar.gz 
+$ tar -zxvf Module-Build-0.31.tar.gz 
+$ cd Module-Build-0.31 
+$ perl Build.PL 
+$ ./Build 
+$ ./Build test 
+$ ./Build install
+
+8.安装File::Lockfile模块
+$ wget http://search.cpan.org/CPAN/authors/id/G/GL/GLORYBOX/File-Lockfile-v1.0.5.tar.gz
+$ tar -zxvf File-Lockfile-v1.0.5.tar.gz 
+$ cd File-Lockfile-v1.0.5 
+$ perl Build.PL
+$ perl ./Build
+$ perl ./Build test
+$ perl ./Build install
+
+9.安装Class-Data-Inheritable模块
+$ wget http://search.cpan.org/CPAN/authors/id/T/TM/TMTM/Class-Data-Inheritable-0.08.tar.gz
+$ tar -zxvf Class-Data-Inheritable-0.08.tar.gz 
+$ cd Class-Data-Inheritable-0.08 
+$ perl Makefile.PL 
+$ make 
+$ make test 
+$ make install
+
+10.安装orzdba
+$ svn co http://code.taobao.org/svn/orzdba/trunk
+$ chmod +x orzdba
+$ cp orzdba  /usr/bin/orzdba
+orzdba配置
+$ mysql_config_editor set --login-path=login --user=root --password
+$ mysql_config_editor print --all
+
+$ vim orzdba
+my $TCPRSTAT = "/usr/bin/tcprstat --no-header -t 1 -n 0 -p $port";
+my $MYSQL    = qq{mysql --login-path=login -s --skip-column-names };
+
+./orzdba -lazy
+
+11.在装sysbench机上执行压测命令
+# prepare准备阶段，构建压测环境
+sysbench /usr/local/share/sysbench/tests/include/oltp_legacy/select.lua \
+--oltp-table-size=20000 --mysql-table-engine=innodb --db-driver=mysql \
+--mysql-user=root --mysql-password=root123 --mysql-port=3306 \
+--mysql-host=10.245.231.202 --mysql-db=test \
+--events=0 --time=60 --oltp-tables-count=20 --report-interval=10 --threads=2 prepare
+
+# 开始压测
+sysbench /usr/local/share/sysbench/tests/include/oltp_legacy/select.lua \
+--oltp-table-size=20000 --mysql-table-engine=innodb --db-driver=mysql \
+--mysql-user=root --mysql-password=root123 --mysql-port=3306 \
+--mysql-host=10.245.231.202 --mysql-db=test \
+--events=0 --time=60 --oltp-tables-count=20 --report-interval=10 --threads=2 run
