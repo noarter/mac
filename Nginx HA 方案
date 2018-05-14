@@ -1,0 +1,130 @@
+解决nginx在记录post数据时 中文字符转成16进制的问题解决nginx在记录post数据时 中文字符转成16进
+http://www.jianshu.com/p/8f8c2b5ca2d1
+需要修改 Nginx 的源代码并编译
+
+插件包下载地址:
+https://openresty.org/download/openresty-1.11.2.5.tar.gz
+https://codeload.github.com/brimworks/lua-zlib/zip/master
+http://luajit.org/download/LuaJIT-2.0.5.tar.gz
+https://ftp.pcre.org/pub/pcre/pcre-8.38.tar.gz
+https://github.com/zls0424/ngx_req_status/archive/master.zip
+
+生成zlib.so文件（现已生成，此步骤可以跳过）(注：生成之前先安装LuaJIT)
+
+https://codeload.github.com/brimworks/lua-zlib/zip/master
+
+lua-zlib-master
+cmake -DLUA_INCLUDE_DIR=/usr/local/include/luajit-2.0/ -DLUA_LIBRARIES=/usr/local/lib/ -DUSE_LUAJIT=ON -DUSE_LUA=OFF
+make
+
+Nginx 安装
+
+1. 安装插件
+ yum install -y readline-devel pcre-devel openssl-devel gcc gcc-c++ make automake libtool zlib-devel libocci-dev libocci lua zlib cmake postgresql-devel  popt-devel keepalived
+2. 安装LusJIT
+
+1. 解压压缩包
+2. 安装 make && sudo make install
+3. 配置环境变量
+	cat >> /etc/profile <<EOF
+	export LUAJIT_LIB=/usr/local/lib
+	export LUAJIT_INC=/usr/local/include/luajit-2.0
+	export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+	EOF
+
+
+3.解压pcre压缩包、解压ngx_req_status压缩包
+
+4. 切换用户安装openresty
+
+1. 解压openresty压缩包
+2. 在/data目录下新建openresty目录文件
+3. 拷贝ngx_http_log_module.c文件到openresty-1.11.2.5/bundle/nginx-1.11.2/src/http/modules/下
+4. 进入openresty-1.13.6.1/bundle/nginx-1.13.6目录下，执行patch -p1 < ngx_req_status/write_filter-VERSION.patch
+5. 执行./configure --prefix=/data/openresty  --without-http_redis2_module --with-http_iconv_module  --with-http_postgres_module  --with-http_stub_status_module  --with-http_ssl_module  --add-module=ngx_req_status模块解压路径 --with-pcre=pcre解压路径 -j2
+gmake && gmake install
+6. 拷贝zlib.so 文件到openresty/lualib目录下
+7. 在nginx/conf目录下新建vhosts、openssl目录
+   a. 拷贝testin.cn.* 到openssl目录下
+   b. 在openssl目录下生成ticket.key文件(openssl rand 80 > ticket.key)。注：搭建HA时，多台nginx下ticket.key文件要保持一致。即一次生成多台服务器间copy
+   c. 拷贝openresty-server.conf文件到vhosts目录下
+8. 拷贝nginx.conf文件到openresty/nginx/conf目录下
+
+
+keepalived配置(使用root用户)  一主一从和nginx两台服务器配置在一起
+
+配置文件地址目录：/etc/keepalived/
+
+主配置
+
+global_defs {
+   router_id nginx_1
+}
+
+vrrp_script chk_nginx {
+   script "/etc/keepalived/nginx_check.sh"
+   interval 2
+   weight -20
+}
+
+vrrp_instance VI_1 {
+    state BACKUP
+    interface eth1
+    virtual_router_id 51
+    priority 100
+    advert_int 1
+    nopreempt
+    authentication {
+        auth_type PASS
+        auth_pass testin
+    }
+    virtual_ipaddress {
+        10.10.1.148/24 dev eth1
+    }
+    track_script {
+        chk_nginx
+    }
+}
+
+
+从配置
+
+global_defs {
+   router_id nginx_2
+}
+
+vrrp_script chk_nginx {
+   script "/etc/keepalived/nginx_check.sh"
+   interval 2
+   weight -20
+}
+
+vrrp_instance VI_1 {
+    state BACKUP
+    interface eth1
+    virtual_router_id 51
+    priority 90
+    advert_int 1
+    nopreempt
+    authentication {
+        auth_type PASS
+        auth_pass testin
+    }
+    virtual_ipaddress {
+        10.10.1.148/24 dev eth1
+    }
+    track_script {
+        chk_nginx
+    }
+}
+
+
+#!/bin/bash
+A=`ps -C nginx --no-header | wc -l`
+if [ $A -eq 0 ];then
+    /usr/local/nginx/sbin/nginx #尝试重新启动nginx
+    sleep 1  #睡眠1秒
+    if [ `ps -C nginx --no-header | wc -l` -eq 0 ];then
+        killall keepalived #启动失败，将keepalived服务杀死。将vip漂移到其它备份节点
+    fi
+fi
