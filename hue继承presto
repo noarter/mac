@@ -1,0 +1,39 @@
+1. 简介
+
+　　因为重新写一个ODBC驱动比较耗时，所以treasure-data为Presto开发了一个PostgreSQL的代理prestogres。
+
+　　能通过psql命令行、PostgreSQL JDBC驱动和PostgreSQL ODBC驱动连接prestogres进行查询，prestogres会将SQL转发给Presto进行查询，并将返回查询结果。
+
+　　2. 使用步骤
+
+   以下3步为Teradata presto的使用步骤：
+
+　　（1）部署prestogres
+
+　　（2）安装prestogres-odbc驱动
+
+　　（3）通过BI工具使用以上驱动，连接prestogres进行SQL查询
+
+　　3. Teradata presto项目地址 https://github.com/treasure-data/prestogres
+
+　　4. Teradata presto驱动项目地址 https://github.com/treasure-data/prestogres-odbc
+
+　　以上的驱动编译时有问题，修正的版本见 https://github.com/CHINA-JD/prestogres-odbc，编译完成的ODBC驱动见 https://github.com/CHINA-JD/prestogres-odbc/releases/tag/v09.03.0300-jd
+
+　　5. presto-admin
+
+　　5.1 简介
+
+　　presto-admin为用来安装、管理与配置presto的工具，由Teradata进行维护
+
+　　5.2 presto-admin项目地址 https://github.com/prestodb/presto-admin
+
+　　5.3 presto-admin项目文档 http://prestodb.github.io/presto-admin/
+
+　　6.  presto on yarn
+
+　　6.1简介
+
+　　presto on yarn借助Apache Slider将presto部署在yarn上，由Teradata进行维护，目前仍在开发与测试中
+
+　　6.2项目地址 https://github.com/prestodb/presto-yarn
