@@ -1,0 +1,83 @@
+$http.post(URL , {
+    parameter:parameter
+},{
+    responseparameterType: 'arraybuffer'
+}).then(function (res) {
+    var blob = new Blob([res.data], {type: 'application/pdf'}),fileName = '文件名称';
+    downFile(blob, fileName);
+)};
+
+function downFile(blob, fileName) {
+    if (window.navigator.msSaveOrOpenBlob) {
+        navigator.msSaveBlob(blob, fileName);
+    } else {
+        var link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = fileName;
+        link.click();
+        window.URL.revokeObjectURL(link.href);
+    }
+}
+
+$('.ckeck-report').on('click', function () {
+    var $index = $(this).parent().parent().index()  //下标
+    var downLink = data[$index].localUrl
+    if (!downLink) {
+        // alert('报告生成中，请稍后再试')
+        return false
+    }
+    var url = path + '/api/task/viewFile?url=' + downLink + '&userId=' + data[$index].userId;
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = "blob";
+    xhr.setRequestHeader("access_token", getCookie('access_token'));
+    xhr.onload = function () {
+        if (this.status == 200) {		
+            //兼容 ie 10 - 11
+            var blob = this.response;
+            var iframe = document.createElement("iframe");
+            iframe.src = window.URL.createObjectURL(blob);
+            $("#preview").html(iframe);
+            $('#preview').css('display', 'block')
+            $('#preview-close').css('display', 'block')
+            if ('msSaveOrOpenBlob' in navigator) {
+                // Microsoft Edge and Microsoft Internet Explorer 10-11
+                window.navigator.msSaveOrOpenBlob(blob, '检测报告.pdf');
+                $('#preview-close').click()
+            }
+        }
+    }
+    xhr.send();
+})
+
+// 点击关闭pdf
+$('#preview-close').on('click', function () {
+    $('#preview').css('display', 'none')
+    $('#preview-close').css('display', 'none')
+    $('#preview iframe').remove()
+})
+
+// 下载报告
+$('.load-report').on('click', function () {
+    var $index = $(this).parent().parent().index()  //下标
+    var downLink = data[$index].localUrl
+    if (!downLink) {
+        return false
+    }
+    var url = path + '/api/task/downloadFile?url=' + downLink + '&userId=' + data[$index].userId;
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = "blob";
+    xhr.setRequestHeader("access_token", getCookie('access_token'));
+    xhr.onload = function () {
+        if (this.status == 200) {
+            var str = downLink.split("_")[1];
+            var blob = this.response;
+            var a = document.createElement('a');
+            a.href = window.URL.createObjectURL(blob);
+            a.download = str;
+            a.dispatchEvent(new MouseEvent('click'));
+        }
+    }
+    xhr.send();
+})
