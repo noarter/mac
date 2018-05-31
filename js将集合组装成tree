@@ -1,27 +1,29 @@
-var nodes = [  
-    {"id":2,"cname":"第一级1","ipid":0,"ccode":"1"},  
-    {"id":3,"cname":"第一级1","ipid":2,"ccode":"1"},  
-    {"id":4,"cname":"第一级1","ipid":2,"ccode":"1"},  
-    {"id":5,"cname":"第一级1","ipid":4,"ccode":"1"},  
-    {"id":6,"cname":"第一级1","ipid":3,"ccode":"1"},  
-    {"id":7,"cname":"第一级1","ipid":0,"ccode":"1"}  
-]         
+var dictionary = [
+    {"id":3,"name":"高中","parentId":0,"ccode":"1"},
+    {"id":4,"name":"性别","parentId":0,"ccode":"1"},
+    {"id":5,"name":"高一","parentId":3,"ccode":"1"},
+    {"id":6,"name":"高二","parentId":3,"ccode":"1"},
+    {"id":7,"name":"衣服","parentId":0,"ccode":"1"},
+    {"id":8,"name":"男","parentId":4,"ccode":"1"},
+    {"id":9,"name":"女","parentId":4,"ccode":"1"}
+];
+        
 function transDate(list,idstr,pidstr){  
     var result = [],temp = {};  
     for(i = 0; i < list.length; i++){  
-        temp[list[i][idstr]]=list[i];//将nodes数组转成对象类型  
+        temp[list[i][idstr]]=list[i];//将nodes数组转成对象类型
     }  
     for(j=0; j<list.length; j++){  
-        tempVp = temp[list[j][pidstr]]; //获取每一个子对象的父对象  
-        if(tempVp){//判断父对象是否存在，如果不存在直接将对象放到第一层  
-            if(!tempVp["nodes"]) tempVp["nodes"] = [];//如果父元素的nodes对象不存在，则创建数组  
-            tempVp["nodes"].push(list[j]);//将本对象压入父对象的nodes数组  
+        tempVp = temp[list[j][pidstr]]; //获取每一个子对象的父对象
+        if(tempVp){//判断父对象是否存在，如果不存在直接将对象放到第一层
+            if(!tempVp["children"]) tempVp["children"] = [];//如果父元素的nodes对象不存在，则创建数组
+            tempVp["children"].push(list[j]);//将本对象压入父对象的nodes数组
         }else{  
-            result.push(list[j]);//将不存在父对象的对象直接放入一级目录  
+            result.push(list[j]);//将不存在父对象的对象直接放入一级目录
         }  
     }  
     return result;  
 }  
   
-console.log(transDate(nodes,"id","ipid")); //传入的值 列表 ，本对象的id，父对象的id  
-document.write(JSON.stringify(transDate(nodes,"id","ipid")));  
+console.log(transDate(dictionary,"id","parentId")); //传入的值 列表 ，本对象的id，父对象的id  
+document.write(JSON.stringify(transDate(dictionary,"id","parentId")));  
