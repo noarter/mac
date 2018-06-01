@@ -1,0 +1,158 @@
+# install jmxtrans
+# 1.下载: http://central.maven.org/maven2/org/jmxtrans/jmxtrans/ 在这个地址上选择自己所需要的版本，并下载rpm包，我选择jmxtrans-270.rpm
+# 2.安装:
+执行命令 [root@yyq local]# rpm -i jmxtrans-270.rpm
+如果有以下错误
+[root@yyq local]# rpm -i jmxtrans-270.rpm
+error: Failed dependencies:
+java >= 1.7 is needed by jmxtrans-270-1.noarch
+则执行命令 [root@yyq local]# rpm -i jmxtrans-270.rpm --nodeps --force
+# 3.查看安装
+默认应用安装在 /usr/share/jmxtrans目录下
+初始化脚本目录 /etc/init.d/jmxtrans
+json文件存放位置 /var/lib/jmxtrans (此目录为你的监控组件的脚本)
+
+1、全局指标
+每秒输入的流量
+"obj" : "kafka.server:type=BrokerTopicMetrics,name=BytesInPerSec"
+"attr" : [ "Count" ]
+"resultAlias":"BytesInPerSec"
+"tags"     : {"application" : "BytesInPerSec"}
+
+每秒输入的流量
+"obj" : "kafka.server:type=BrokerTopicMetrics,name=BytesOutPerSec"
+"attr" : [ "Count" ]
+"resultAlias":"BytesOutPerSec"
+"tags"     : {"application" : "BytesOutPerSec"}
+
+每秒输入的流量
+"obj" : "kafka.server:type=BrokerTopicMetrics,name=BytesRejectedPerSec"
+"attr" : [ "Count" ]
+"resultAlias":"BytesRejectedPerSec"
+"tags"     : {"application" : "BytesRejectedPerSec"}
+
+每秒的消息写入总量
+"obj" : "kafka.server:type=BrokerTopicMetrics,name=MessagesInPerSec"
+"attr" : [ "Count" ]
+"resultAlias":"MessagesInPerSec"
+"tags"     : {"application" : "MessagesInPerSec"}
+
+每秒FetchFollower的请求次数
+"obj" : "kafka.network:type=RequestMetrics,name=RequestsPerSec,request=FetchFollower"
+"attr" : [ "Count" ]
+"resultAlias":"RequestsPerSec"
+"tags"     : {"request" : "FetchFollower"}
+
+每秒FetchConsumer的请求次数
+"obj" : "kafka.network:type=RequestMetrics,name=RequestsPerSec,request=FetchConsumer"
+"attr" : [ "Count" ]
+"resultAlias":"RequestsPerSec"
+"tags"     : {"request" : "FetchConsumer"}
+
+每秒Produce的请求次数
+"obj" : "kafka.network:type=RequestMetrics,name=RequestsPerSec,request=Produce"
+"attr" : [ "Count" ]
+"resultAlias":"RequestsPerSec"
+"tags"     : {"request" : "Produce"}
+
+内存使用的使用情况
+"obj" : "java.lang:type=Memory"
+"attr" : [ "HeapMemoryUsage", "NonHeapMemoryUsage" ]
+"resultAlias":"MemoryUsage"
+"tags"     : {"application" : "MemoryUsage"}
+
+GC的耗时和次数
+"obj" : "java.lang:type=GarbageCollector,name=*"
+"attr" : [ "CollectionCount","CollectionTime" ]
+"resultAlias":"GC"
+"tags"     : {"application" : "GC"}
+
+线程的使用情况
+"obj" : "java.lang:type=Threading"
+"attr" : [ "PeakThreadCount","ThreadCount" ]
+"resultAlias":"Thread"
+"tags"     : {"application" : "Thread"}
+
+副本落后主分片的最大消息数量
+"obj" : "kafka.server:type=ReplicaFetcherManager,name=MaxLag,clientId=Replica"
+"attr" : [ "Value" ]
+"resultAlias":"ReplicaFetcherManager"
+"tags"     : {"application" : "MaxLag"}
+
+该broker上的partition的数量
+"obj" : "kafka.server:type=ReplicaManager,name=PartitionCount"
+"attr" : [ "Value" ]
+"resultAlias":"ReplicaManager"
+"tags"     : {"application" : "PartitionCount"}
+
+正在做复制的partition的数量
+"obj" : "kafka.server:type=ReplicaManager,name=UnderReplicatedPartitions"
+"attr" : [ "Value" ]
+"resultAlias":"ReplicaManager"
+"tags"     : {"application" : "UnderReplicatedPartitions"}
+
+Leader的replica的数量
+"obj" : "kafka.server:type=ReplicaManager,name=LeaderCount"
+"attr" : [ "Value" ]
+"resultAlias":"ReplicaManager"
+"tags"     : {"application" : "LeaderCount"}
+
+一个请求FetchConsumer耗费的所有时间
+"obj" : "kafka.network:type=RequestMetrics,name=TotalTimeMs,request=FetchConsumer"
+"attr" : [ "Count","Max" ]
+"resultAlias":"TotalTimeMs"
+"tags"     : {"application" : "FetchConsumer"}
+
+一个请求FetchFollower耗费的所有时间
+"obj" : "kafka.network:type=RequestMetrics,name=TotalTimeMs,request=FetchFollower"
+"attr" : [ "Count","Max" ]
+"resultAlias":"TotalTimeMs"
+"tags"     : {"application" : "FetchFollower"}
+
+一个请求Produce耗费的所有时间
+"obj" : "kafka.network:type=RequestMetrics,name=TotalTimeMs,request=Produce"
+"attr" : [ "Count","Max" ]
+"resultAlias":"TotalTimeMs"
+"tags"     : {"application" : "Produce"}
+2、topic的监控指标
+
+falcon_monitor_us每秒的写入流量
+"kafka.server:type=BrokerTopicMetrics,name=BytesInPerSec,topic=falcon_monitor_us"
+"attr" : [ "Count" ]
+"resultAlias":"falcon_monitor_us"
+"tags"     : {"application" : "BytesInPerSec"}
+
+falcon_monitor_us每秒的输出流量
+"kafka.server:type=BrokerTopicMetrics,name=BytesOutPerSec,topic=falcon_monitor_us"
+"attr" : [ "Count" ]
+"resultAlias":"falcon_monitor_us"
+"tags"     : {"application" : "BytesOutPerSec"}
+
+falcon_monitor_us每秒写入消息的数量
+"obj" : "kafka.server:type=BrokerTopicMetrics,name=MessagesInPerSec,topic=falcon_monitor_us"
+"attr" : [ "Count" ]
+"resultAlias":"falcon_monitor_us"
+"tags"     : {"application" : "MessagesInPerSec"}
+
+falcon_monitor_us在每个分区最后的Offset
+"obj" : "kafka.log:type=Log,name=LogEndOffset,topic=falcon_monitor_us,partition=*"
+"attr" : [ "Value" ]
+"resultAlias":"falcon_monitor_us"
+"tags"     : {"application" : "LogEndOffset"}
+PS：
+
+1、参数说明
+"obj"对应jmx的ObjectName，就是我们要监控的指标
+"attr"对应ObjectName的属性，可以理解为我们要监控的指标的值
+"resultAlias"对应metric 的名称，在InfluxDb里面就是MEASUREMENTS名
+"tags" 对应InfluxDb的tag功能，对与存储在同一个MEASUREMENTS里面的不同监控指标可以做区分，我们在用Grafana绘图的时候会用到，建议对每个监控指标都打上tags
+2、对于全局监控，每一个监控指标对应一个MEASUREMENTS，所有的kafka节点同一个监控指标数据写同一个MEASUREMENTS ，对于topc监控的监控指标，同一个topic所有kafka节点写到同一个MEASUREMENTS，并且以topic名称命名
+
+# 4.调试，查看
+修改jdk安装目录为服务器安装jdk的目录
+修改配置文件/usr/share/jmxtrans/etc/wrapper.conf中的wrapper.java.command=/usr/local/java/jdk1.8.0_171/bin/java
+将日志等级修改为DEBUG
+修改配置文件/usr/share/jmxtrans/etc/wrapper.conf中的wrapper.java.additional.5=-Djmxtrans.log.level=DEBUG
+日志文件目录 wrapper.java.additional.6=-Djmxtrans.log.dir=/var/log/jmxtrans
+
+# install influxdb
