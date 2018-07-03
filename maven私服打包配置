@@ -1,0 +1,131 @@
+一、maven私服的安装
+
+1.进入https://bintray.com/jfrog/artifactory/jfrog-artifactory-oss-zip下载artifactory 
+
+2.解压下载的artifactory
+
+3.进入artifactory目录下面的bin目录下
+
+4.通过artifactory.sh启动服务默认的账户是admin，密码是testin.cn
+
+5.然后通过http://ip:port/artifactory访问私服控制台
+
+
+
+二、maven私服的使用
+
+1.建立一个虚拟私服，然后将你需要的本地私服和远程私服加入到此私服的配置中；
+
+2.在项目中就直接使用你新建的虚拟私服地址（http://ip:port/artifactory/新建的私服的key） 
+
+3.开发者本地的架包可以打包上传到testin-snapshot-local ，发布版本的架包可以打包上传到testin-release-local
+
+4.配置私服的方法:
+
+settings.xml配置如下:
+
+settings.xml
+<mirror>
+   <id>testin-data-repo</id>
+   <mirrorOf>*</mirrorOf>
+   <name>testin-data-repo</name>
+   <url>http://10.10.1.30:8081/artifactory/testin-data-repo</url>
+</mirror>
+
+pom.xml配置如下：
+
+pom.xml
+<!-- maven私服仓库地址配置 -->
+<repositories>
+    <repository>
+        <id>testin-data-repo</id>
+        <name>testin-data-repo</name>
+        <url>http://10.10.1.30:8081/artifactory/testin-data-repo</url>
+    </repository>
+</repositories>
+<pluginRepositories>
+    <pluginRepository>
+        <id>testin-data-repo</id>
+        <name>testin-data-repo</name>
+        <url>http://10.10.1.30:8081/artifactory/testin-data-repo</url>
+    </pluginRepository>
+</pluginRepositories>
+
+
+三、发布架包到私服的snapshot、release库的配置：
+
+1.settings.xml配置文件下载地址：settings.xml
+
+2.在项目pom.xml中增加如下配置：
+
+<!-- maven打包发布私服仓库配置 -->
+<distributionManagement>
+    <repository>
+        <id>central</id>
+        <name>testin-release-local</name>
+        <url>http://10.10.1.30:8081/artifactory/testin-release-local</url>
+    </repository>
+    <snapshotRepository>
+        <id>snapshots</id>
+        <name>testin-snapshot-local</name>
+        <url>http://10.10.1.30:8081/artifactory/testin-snapshot-local</url>
+    </snapshotRepository>
+</distributionManagement>
+ 
+<!--git 远程仓库配置-->
+<scm>
+    <url>http://10.10.1.18:8200/abtest/testin-data-web/</url>
+    <!--connection, developerConnection: 都是连接字符串，其中后者是具有write权限的scm连接 -->
+    <!--需要打包项目的git地址-->
+    <developerConnection>scm:git:http://10.10.1.18:8200/abtest/testin-data-web.git</developerConnection>
+    <!--需要打包项目的git地址-->
+    <connection>scm:git:http://10.10.1.18:8200/abtest/testin-data-web.git</connection>
+    <tag>HEAD</tag>
+</scm>
+ 
+ 
+<!-- 发布插件 -->
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-release-plugin</artifactId>
+    <version>2.5.3</version>
+    <configuration>
+        <username>git账号</username>
+        <password>git密码</password>
+        <preparationGoals>package deploy</preparationGoals>
+        <autoVersionSubmodules>true</autoVersionSubmodules>
+        <!-- 不使用默认的profile -->
+        <useReleaseProfile>false</useReleaseProfile>
+        <!--  在发布时不检查是否提交 svn 的文件过滤配置 -->
+        <checkModificationExcludes>
+            <checkModificationExclude>.project</checkModificationExclude>
+            <checkModificationExclude>.settings</checkModificationExclude>
+            <checkModificationExclude>.classpath</checkModificationExclude>
+            <checkModificationExclude>**\.project</checkModificationExclude>
+            <checkModificationExclude>**\.settings</checkModificationExclude>
+            <checkModificationExclude>**\.classpath</checkModificationExclude>
+        </checkModificationExcludes>
+    </configuration>
+</plugin>
+
+
+3.snapshot版本发布：mvn clean deploy -DskipTests
+
+4.release版本发布：
+
+父项目的pom.xml以及子模块的pom.xml中，version字段都需要配置成“x.x.x-SNAPSHOT”版本
+mvn release:prepare      Maven会进入交互模式，询问需要发布release的版本（默认是将当前版本的“-SNAPSHOT去掉”）；然后询问发布后snapshot版本的版本号（默认当前版本增加一位小版本号）；直接回车即可确认。
+
+然后插件开始工作，主要进行的操作有：
+
+A） 替换父工程和子模块的pom.xml中的version字段为1.0.5；然后在本地git仓库当前分支Commit一个版本
+
+B） 在本地git仓库，创建一个tag，默认命名为XXX-1.0.5
+
+C） 再将父工程和子模块的pom.xml中的version字段替换成1.0.6-SNAPSHOT；然后本地git仓库当前分支再Commit一个版本
+
+D） 将以上本地版本push到git remote仓库
+
+mvn release:perform     主要进行的操作是将第一步生成的tag clone到本地，然后对其进行build和deploy操作，完成之后能看到maven release仓库中已经有了对应的版本
+
+mvn release:clean   这一步将上述过程中生成的临时文件删除
