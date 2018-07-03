@@ -1,0 +1,21 @@
+<build>
+   <plugins>
+      <plugin>
+         <groupId>org.apache.maven.plugins</groupId>
+         <artifactId>maven-resources-plugin</artifactId>
+         <configuration>
+            <encoding>UTF-8</encoding>
+            <nonFilteredFileExtensions>
+               <nonFilteredFileExtension>xlsx</nonFilteredFileExtension>
+               <nonFilteredFileExtension>xls</nonFilteredFileExtension>
+            </nonFilteredFileExtensions>
+         </configuration>
+      </plugin>
+   </plugins>
+   <resources>
+      <resource>
+         <directory>src/main/resources</directory>
+         <filtering>true</filtering>
+      </resource>
+   </resources>
+</build>
