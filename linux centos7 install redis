@@ -1,0 +1,78 @@
+安装redis:
+
+yum -y install redis
+redis安装完毕后，我们来查看下redis安装时创建的相关文件，如下：
+
+rpm -qa |grep redis      
+rpm -ql redis     
+
+
+通过上图，我们可以看出redis的配置文件是/etc/redis.conf，数据文件dump.rdb存放到/var/lib/redis/目录下，日志文件为 /var/log/redis/redis.log，其他的都是默认的。
+
+现在来查看redis版本使用redis-cli –version命令，如下：
+
+redis-cli –version
+现在我们只要启动redis就可以使用redis了，到此yum方式安装redis就介绍完毕。
+
+启动/停止/重启 Redis
+ 启动服务：
+
+systemctl start redis.service
+ 停止服务：
+
+systemctl stop redis.service
+重启服务：
+
+systemctl restart redis.service
+检查状态：
+
+systemctl status redis.service
+随系统启动服务：
+
+systemctl enable redis.service
+关闭开机启动：
+
+systemctl disable redis.service
+ redis中配置访问密码：
+
+yum方式安装的redis配置文件通常在/etc/redis.conf中,打开配置文件找到
+
+#requirepass foobared 
+去掉行前的注释，并修改密码为所需的密码,保存文件
+
+requirepass yourpass
+重启redis，即可生效。
+
+或者通过redis命令，修改：
+
+127.0.0.1:6379> CONFIG set requirepass yourpass
+通过命令也可查看redis的密码：
+
+127.0.0.1:6379> CONFIG get requirepass
+使用修改后的密码登录redis，可以执行相应操作
+
+redis-cli -h 127.0.0.1 -p 6379 -a yourpass
+redis 127.0.0.1:6379> config get requirepass  
+1) "requirepass"  
+2) "yourpass"
+配置远程客户端连接redis：
+
+Redis Desktop Manager是Redis图形化管理工具，可以远程图形化管理redis服务器。
+
+首先要到服务器上，修改redis.conf文件中的配置，找到
+
+bind 127.0.0.1
+将其注释，或者是添加服务器的远程访问IP，可实现多IP访问
+
+bind 127.0.0.1 192.168.1.100
+保存之后重启服务；
+
+检测CentOS的redis端口是否开放：
+
+[root@centos ~]# firewall-cmd --query-port=6379/tcp
+no
+如上为no，表示并未开放，输入命令开启：
+
+[root@centos ~]# firewall-cmd --add-port=6379/tcp
+success
+显示开启成功，可以再询是否成开启。
