@@ -1,0 +1,43 @@
+1、先查看目前机器上有几块硬盘，及已挂载磁盘：
+
+fdisk -l
+
+能够查看到当前主机上已连接上的磁盘，以及已经分割的磁盘分区。（下面以/dev/vdb磁盘进行分区、挂载为例，挂载点设置为/data）
+
+df -h
+
+能够查看到已经挂载的磁盘。
+
+2、对要挂载的硬盘创建磁盘分区、格式化：
+
+fdisk /dev/vdb
+Command (m for help):n回车
+Partition type:
+   p   primary (0 primary, 0 extended, 4 free)
+   e   extended
+Select (default p):p回车
+Partition number (1-4, default 1):1回车
+Partition number (1-4): 1回车
+First sector (2048-419430399, default 2048): 回车
+Last cylinder, +cylinders or +size{K,M,G} (1-416101, default 416101):回车
+Command (m for help): w
+fdisk -l
+找到物理磁盘/dev/vdb下创建的分区。
+mkfs.ext4 /dev/vdb1
+格式化上述找到的分区。
+Writing superblocks and filesystem accounting information:回车（等待1~10分钟，视磁盘大小）
+
+3、挂载磁盘：
+
+mkdir -p /data
+mount /dev/vdb1 /data
+
+3、设置开机自动挂载：
+
+blkid
+查看磁盘UUID及文件类型。
+/dev/vdb1: UUID="f524c7a6-4fbb-41a9-8640-54e4e0ae69c1" TYPE="ext4"
+ 
+vi /etc/fstab
+编辑系统分区表(使系统启动后自动挂载)，增加一条数据：
+UUID=f524c7a6-4fbb-41a9-8640-54e4e0ae69c1 /data ext4 defaults 1 2
