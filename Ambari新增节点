@@ -1,0 +1,26 @@
+注意：线上的ambari都是在ambari用户下安装
+1、将原有集群中ambari.repo文件放到新增节点的 /etc/yum.repos.d/目录：
+[ambari@hbase-region-01 ~]$ cd /etc/yum.repos.d/
+[ambari@hbase-region-01 yum.repos.d]$ ls
+ambari.repo CentOS-Base.repo CentOS-Epel.repo HDP.repo HDP-UTILS.repo salt-latest.repo
+[ambari@hbase-region-01 yum.repos.d]$ cat ambari.repo
+[ambari-2.5.2.0]
+name=ambari Version - ambari-2.5.2.0
+baseurl=http://172.18.33.8/ambari/centos7
+gpgcheck=1
+gpgkey=http://172.18.33.8/ambari/centos7/RPM-GPG-KEY/RPM-GPG-KEY-Jenkins
+enabled=1
+priority=1
+
+2、安装ambari-agent节点：
+sudo yum install ambari-agent -y
+
+3、修改ambari agent配置文件
+vim /etc/ambari-agent/conf/ambari-agent.ini 
+
+修改为ambari server地址
+4、启动ambari agent
+sudo /etc/init.d/ambari-agent start
+5、然后到ambari页面上添加主机。
+6、提供相应信息
+7、完后一直往后走，安装需要的服务。
