@@ -1,0 +1,250 @@
+1、zookeeper部署
+目录：/data/app
+
+1、准备安装包：
+
+[kafka@kafka-parser-01 app]$ ls -shl zookeeper-3.4.12.tar.gz
+36M -rw-rw-r-- 1 kafka kafka 36M Nov 28 17:44 zookeeper-3.4.12.tar.gz
+
+2、解压：
+
+[kafka@kafka-parser-01 app]$ tar -zxvf zookeeper-3.4.12.tar.gz
+
+3、修改配置文件：
+
+[kafka@kafka-parser-01 zookeeper-3.4.12]$ vim conf/zoo.cfg
+
+tickTime=2000
+initLimit=5
+syncLimit=2
+dataDir=/data1/zookeeper_data
+clientPort=2181
+autopurge.purgeInterval=1
+server.1=kafka-parser-01.prod.hz-al.g7in.com:2888:3888
+server.2=kafka-parser-02.prod.hz-al.g7in.com:2888:3888
+server.3=kafka-parser-03.prod.hz-al.g7in.com:2888:3888
+
+4、配置myid：在数据目录新建myid文件，然后分别放入1，2，3，与配置文件中的server.x 对应。
+
+server1：echo 1 > /data1/zookeeper_data/myid
+
+server2：echo 2 > /data1/zookeeper_data/myid
+
+server3：echo 3 > /data1/zookeeper_data/myid
+
+5、启动
+
+cd /data/app/zookeeper-3.4.12
+
+./bin/zkServer.sh start
+
+查看端口：
+
+[kafka@kafka-parser-01 app]$ netstat -lntp|grep 2181
+
+2、kafka搭建
+目录：/data/app
+
+1、准备安装包：
+
+[kafka@kafka-parser-01 app]$ ls -shl kafka_2.11-1.1.0.tar.gz
+55M -rw-rw-r-- 1 kafka kafka 55M Nov 28 23:42 kafka_2.11-1.1.0.tar.gz
+
+2、解压：
+
+[kafka@kafka-parser-01 app]$ tar -zxvf kafka_2.11-1.1.0.tar.gz
+
+3、修改配置文件
+
+[kafka@kafka-parser-01 kafka_2.11-1.1.0]$ cat config/server.properties |egrep -v "#|^$"
+broker.id=1
+listeners=SASL_PLAINTEXT://kafka-parser-01.prod.hz-al.g7in.com:9094
+num.network.threads=8
+num.io.threads=8
+socket.send.buffer.bytes=102400
+socket.receive.buffer.bytes=102400
+socket.request.max.bytes=104857600
+log.dirs=/data1/kafka-logs,/data2/kafka-logs
+num.partitions=1
+num.recovery.threads.per.data.dir=8
+offsets.topic.replication.factor=3
+transaction.state.log.replication.factor=5
+transaction.state.log.min.isr=3
+log.retention.hours=72
+log.segment.bytes=1073741824
+log.retention.check.interval.ms=300000
+zookeeper.connect=kafka-parser-01.prod.hz-al.g7in.com:2181,kafka-parser-02.prod.hz-al.g7in.com:2181,kafka-parser-03.prod.hz-al.g7in.com:2181
+zookeeper.connection.timeout.ms=6000
+zookeeper.session.timeout.ms=60000
+group.initial.rebalance.delay.ms=0
+delete.topic.enable=true
+auto.create.topics.enable=false
+security.inter.broker.protocol=SASL_PLAINTEXT
+authorizer.class.name=kafka.security.auth.SimpleAclAuthorizer
+allow.everyone.if.no.acl.found=false
+sasl.kerberos.service.name=kafka
+sasl.mechanism.inter.broker.protocol=GSSAPI
+sasl.enabled.mechanisms=GSSAPI
+super.users=User:kafka
+
+注意：broker.id=1，每一个brkoer不一样。
+
+4、启动脚本：
+
+[kafka@kafka-parser-01 kafka_2.11-1.1.0]$ cat bin/kafka-server-start.sh |egrep -v "#|^$"
+then
+echo "USAGE: $0 [-daemon] server.properties [--override property=value]*"
+exit 1
+fi
+base_dir=$(dirname $0)
+if [ "x$KAFKA_LOG4J_OPTS" = "x" ]; then
+export KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:$base_dir/../config/log4j.properties"
+fi
+if [ "x$KAFKA_HEAP_OPTS" = "x" ]; then
+export KAFKA_HEAP_OPTS="-Xmx8G -Xms8G"
+fi
+export JMX_PORT="9996"
+export KRB5_OPTS=" -Djava.security.krb5.conf=/data/app/kafka_2.11-1.1.0/krb5.conf -Djava.security.auth.login.config=/data/app/kafka_2.11-1.1.0/jaas.conf "
+EXTRA_ARGS=${EXTRA_ARGS-'-name kafkaServer -loggc'}
+COMMAND=$1
+case $COMMAND in
+-daemon)
+EXTRA_ARGS="-daemon "$EXTRA_ARGS
+shift
+;;
+*)
+;;
+esac
+exec $base_dir/kafka-run-class.sh $EXTRA_ARGS kafka.Kafka "$@"
+
+注意：KRB5_OPTS为kerbros认证使用
+
+5、kerberos证书生成
+
+针对每台broker在kerberos中生成证书
+
+kadmin.local -q 'addprinc -randkey kafka/kafka-parser-02.prod.hz-al.g7in.com@G7.COM'
+
+kadmin.local -q "ktadd -k /root/keys/kafka-parser-02.prod.hz-al.g7in.com.keytab kafka/kafka-parser-02.prod.hz-al.g7in.com@G7.COM"
+
+注意：多少台broker就需要申请多少个。命名以hostname命名。
+
+6、kerberos加入
+
+将keybtab文件放到启动脚本指定的目录下：
+
+[kafka@kafka-parser-01 kafka_2.11-1.1.0]$ ls /data/app/kafka_2.11-1.1.0/kafka-parser-01.prod.hz-al.g7in.com.keytab
+/data/app/kafka_2.11-1.1.0/kafka-parser-01.prod.hz-al.g7in.com.keytab
+
+配置jaas.conf
+
+[kafka@kafka-parser-01 kafka_2.11-1.1.0]$ cat jaas.conf
+KafkaServer {
+com.sun.security.auth.module.Krb5LoginModule required
+useKeyTab=true
+storeKey=true
+keyTab="/data/app/kafka_2.11-1.1.0/kafka-parser-01.prod.hz-al.g7in.com.keytab"
+principal="kafka/kafka-parser-01.prod.hz-al.g7in.com@G7.COM";
+};
+
+配置krb5.conf 
+
+[kafka@kafka-parser-01 kafka_2.11-1.1.0]$ cat krb5.conf
+[logging]
+default = FILE:/var/log/krb5libs.log
+kdc = FILE:/var/log/krb5kdc.log
+admin_server = FILE:/var/log/kadmind.log
+
+[libdefaults]
+default_realm = G7.COM
+dns_lookup_realm = false
+dns_lookup_kdc = false
+ticket_lifetime = 24h
+renew_lifetime = 7d
+forwardable = true
+rdns = false
+master_key_type = des3-hmac-sha1
+default_tgs_enctypes = des3-hmac-sha1 des-cbc-crc des-cbc-md5
+default_tkt_enctypes = des3-hmac-sha1 des-cbc-crc des-cbc-md5
+permitted_enctypes = des3-hmac-sha1 des-cbc-crc des-cbc-md5
+
+[realms]
+G7.COM = {
+kdc = kerberos-1:8800
+admin_server = kerberos-1:8801
+master_key_type = des3-hmac-sha1
+supported_enctypes = des3-hmac-sha1:normal des-cbc-crc:normal
+}
+
+[domain_realm]
+.g7.com = G7.COM
+g7.com = G7.COM
+
+注意：kerberos服务器要能够正常解析
+
+7、启动
+
+./bin/kafka-server-start.sh -daemon config/server.properties
+
+8、查看端口
+
+[kafka@kafka-parser-01 kafka_2.11-1.1.0]$ netstat -lntp|grep 9094
+
+
+
+9、常用命令
+
+新建topic：
+
+./bin/kafka-topics.sh --zookeeper kafka-parser-01.prod.hz-al.g7in.com:2181 --create --topic test --partitions 6 --replication-factor 2
+
+查看topic列表：
+
+./bin/kafka-topics.sh --zookeeper kafka-parser-01.prod.hz-al.g7in.com:2181 --list
+
+查看topic状态：
+
+[kafka@kafka-parser-01 kafka_2.11-1.1.0]$ ./bin/kafka-topics.sh --zookeeper kafka-parser-01.prod.hz-al.g7in.com:2181 --topic test --describe
+Topic:test PartitionCount:6 ReplicationFactor:2 Configs:
+Topic: test Partition: 0 Leader: 3 Replicas: 3,4 Isr: 3,4
+Topic: test Partition: 1 Leader: 4 Replicas: 4,5 Isr: 4,5
+Topic: test Partition: 2 Leader: 5 Replicas: 5,6 Isr: 5,6
+Topic: test Partition: 3 Leader: 6 Replicas: 6,2 Isr: 6,2
+Topic: test Partition: 4 Leader: 2 Replicas: 2,3 Isr: 2,3
+Topic: test Partition: 5 Leader: 3 Replicas: 3,5 Isr: 3,5
+
+生产消息
+./bin/kafka-console-producer1.sh --broker-list kafka-parser-01.prod.hz-al.g7in.com:9094 --topic test --producer.config ./config/consumer.properties
+消费消息
+./bin/kafka-console-consumer.sh --consumer.config ./config/consumer.properties --bootstrap-server kafka-parser-01.prod.hz-al.g7in.com:9094 --topic test --from-beginning
+
+测试验证使用
+
+consumer配置文件：
+
+[kafka@kafka-parser-01 kafka_2.11-1.1.1]$ cat ./config/consumer.properties|egrep -v "#|^$"
+bootstrap.servers=localhost:9094
+group.id=test-consumer-group
+security.protocol=SASL_PLAINTEXT
+sasl.mechanism=GSSAPI
+sasl.kerberos.service.name=kafka
+
+consumer启动脚本：
+
+[kafka@kafka-parser-01 kafka_2.11-1.1.1]$ cat bin/kafka-console-consumer.sh |egrep -v "#|^$"
+export KRB5_OPTS=" -Djava.security.krb5.conf=/data/app/kafka_2.11-1.1.1/krb5.conf -Djava.security.auth.login.config=/data/app/kafka_2.11-1.1.1/jaas_kafka.conf "
+if [ "x$KAFKA_HEAP_OPTS" = "x" ]; then
+export KAFKA_HEAP_OPTS="-Xmx512M"
+fi
+exec $(dirname $0)/kafka-run-class.sh kafka.tools.ConsoleConsumer "$@"
+
+
+
+producer启动脚本：
+
+[kafka@kafka-parser-01 kafka_2.11-1.1.1]$ cat bin/kafka-console-producer.sh |egrep -v "#|^$"
+export KRB5_OPTS=" -Djava.security.krb5.conf=/data/app/kafka_2.11-1.1.1/krb5.conf -Djava.security.auth.login.config=/data/app/kafka_2.11-1.1.1/jaas_kafka.conf"
+if [ "x$KAFKA_HEAP_OPTS" = "x" ]; then
+export KAFKA_HEAP_OPTS="-Xmx512M"
+fi
+exec $(dirname $0)/kafka-run-class.sh kafka.tools.ConsoleProducer "$@"
