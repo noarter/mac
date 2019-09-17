@@ -1,0 +1,140 @@
+supervisor介绍
+supervisor安装
+1. 安装依赖meld3
+wget https://pypi.python.org/packages/45/a0/317c6422b26c12fe0161e936fc35f36552069ba8e6f7ecbd99bbffe32a5f/meld3-1.0.2.tar.gz#md5=3ccc78cd79cffd63a751ad7684c02c91
+tar zxvf meld3-1.0.2.tar.gz
+cd meld3-1.0.2
+python setup.py install
+2. 安装supervisor
+
+
+wget https://files.pythonhosted.org/packages/44/60/698e54b4a4a9b956b2d709b4b7b676119c833d811d53ee2500f1b5e96dc3/supervisor-3.3.4.tar.gz
+tar -xf supervisor-3.3.4.tar.gz
+cd /usr/local/supervisor-3.3.4/
+python setup.py install
+3. supervisor配置
+# echo_supervisord_conf > /etc/supervisord.conf //不执行，从其他地方拷贝；
+
+cd /etc
+mkdir supervisord
+
+从其他服务器复制supervisord文件夹，可以从172.22.35.213拷贝；
+supervisord文件夹包括：
+|_supervisord.conf //配置文件
+|_supervisord.conf.d //管理的服务配置文件夹
+supervisord.conf.d文件夹包括：
+|_copy.sh //新增加管理的服务
+|_group_tpl.ini.j2
+|_monitor.ini // 监控服务
+|_monitor.py // 监控服务
+|_tpl.ini.j2 //copy.sh使用的模板
+注意：要删除其他多余的ini文件，不然也会启动，启动时找不到相关路径报错；
+
+ln -s /etc/supervisord/supervisord.conf supervisord.conf
+修改supervisord.conf：
+[inet_http_server]
+port=172.22.35.213:9001 //修改ip为当前服务器ip
+
+4. supervisor启动
+/usr/bin/python /usr/bin/supervisord -c /etc/supervisord/supervisord.conf
+查看supervisor日志：/tmp/supervisord.log
+
+5. supervisor自启动
+从其他已安装supervisor的服务器拷贝启动脚本（可以从172.22.35.213拷贝）“supervisord”；
+脚本路径:/etc/init.d/supervisord
+脚本放下相同的路径，不用做任何修改；
+执行命令:
+chkconfig supervisord on
+chkconfig --level 2345 supervisord on
+查看是否添加成功:
+chkconfig --list | grep supervisord
+
+supervisor使用
+1. 添加要管理的服务
+可以使用"./copy.sh serverName"进行复制；
+复制后会创建"serverName.ini"文件，同时会创建" /data/app/serverName"文件夹和"/data/app_log/serverName/log"；
+也可以复制其他ini文件进行修改，手动创建服务文件目录；
+
+2. 配置serverName.ini
+参考其他ini文件，文件中每个参数都有说明；
+重点关注参数：
+[program:serverName]，user，command，stdout_logfile，stderr_logfile，startsecs；
+有时候需要添加环境变量，格式如下：
+environment = JAVA_HOME="/usr/local/jdk1.8.0_131"
+按组管理：
+添加groupName.ini文件；
+文件内容：
+[group:group_name]
+programs=project_name,project_name2
+priority=999
+
+3. 常用命令
+supervisorctl status //查看状态
+supervisorctl start serverName //启动服务
+supervisorctl restart serverName //重启服务
+supervisorctl stop serverName //重启服务
+supervisorctl reread //配置文件对比，添加、删除、修改ini后执行，可以查看有那些服务的ini做了修改
+supervisorctl update //重启ini有变化的服务，修改ini后执行该命令，不要执行reload
+supervisorctl reload //重启所有服务，一般不要执行该命令
+操作组下某个服务：
+supervisorctl start|stop|restart <group_name:project_name>
+注意：
+当一个 project 不属于任何 group 的时候， 可以使用 sudo supervisorctl add/remove <project_name> 进行配置增删。
+当一个 project 属于某个 group 的时候， 不能单独进行配置增删，所有操作必须按组进行。
+按组操作时，修改组中某一个projct的ini文件，update时会重启组内所有project。
+
+supervisor监控工具Cesi
+Cesi安装
+新版本必须使用python3
+https://github.com/Gamegos/cesi
+
+1. 安装依赖
+$ sudo yum install -y git epel-release
+$ sudo yum install -y python34 python34-pip
+2. 安装Cesi
+安装在172.22.35.213，/data/cesi
+
+wget https://github.com/gamegos/cesi/releases/download/v2.6.7/cesi-extended.tar.gz -O cesi.tar.gz
+tar -xvf cesi.tar.gz
+python3 -m venv venv
+source venv/bin/activate #创建一个项目虚拟环境.
+(venv) $ pip3 install -r requirements.txt
+deactivate #退出项目的 virtualenv 虚拟环境.
+3. 配置Cesi 
+修改/data/cesi/defaults/cesi.conf.toml
+在[nodes]节点添加要管理的服务，如下：
+
+[[nodes]]
+name = "172.22.35.213[rocket-to-kafka][apollo]"
+environment = "Test"
+username = "VgbsFtpakGSk5yDQ"
+password = "oe6CPqr7cAiEVgVoYFuMe3fE5A2v4bXb"
+host = "172.22.35.213"
+port = "9001"
+4. 启动Cesi
+启动命令：
+
+source venv/bin/activate #创建一个项目虚拟环境.
+python3 /data/cesi/cesi/run.py --config-file /data/cesi/defaults/cesi.conf.toml
+
+将Cesi也加入supervisor服务管理；
+启动使用start.sh脚本，脚本内容同上。
+
+Cesi使用
+1. 服务地址
+http://172.22.35.213:5000/
+admin/admin
+
+2. 使用方式
+打开页面查看。
+
+钉钉报警配置
+1. PaaS钉钉报警群为：Supervisord报警群，机器人：PaaS-Supervisor报警
+2. IoT钉钉报警群为：IOT-Supervisor测试报警群，机器人：大S报警
+3. 新增加PaaS钉钉报警，保留原来的IoT钉钉报警，修改监听服务配置文件；
+4. 钉钉报警服务为listener，配置文件为每台服务器的/etc/supervisord/supervisord.conf.d/monitor.py；
+5. 在配置文件中添加钉钉机器人相关配置：
+IOT_PaaS_dingding="https://oapi.dingtalk.com/robot/send?access_token=5f6ef062f2311035034c4197147a5c5c69a282478f1abf93d4a87b46c8a8a1cf"
+dingdinghook_PaaS = IOT_PaaS_dingding
+requests.post(dingdinghook_PaaS, headers=headers, json=alertinfo)
+6. 新加服务器supervisor时可以从已配置服务器拷贝，172.22.35.213等已配置。
